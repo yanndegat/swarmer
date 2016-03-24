@@ -9,11 +9,11 @@ You'll find other and simpler tutorials or github projects to deploy swarm on AW
 This project tries to compile a lot of resources to get a swarm cluster up and running on a private aws cloud.
 
 Swarmer is built on top of the following components:
-- [Terraform](https://www.terraform.io/) for provisioning the infrastructure
-- [Packer](http://packer.io/) for building the boxes for various providers (Virtualbox, AWS, Kvm, ...)
-- [Consul](http://consul.io) for service discovery, DNS
-- [Docker](http://docker.io) for application container runtimes, of course
-- [Vagrant](http://vagrantup.com) for running the swarm cluster in virtualbox
+- [[https://www.terraform.io/][Terraform]] for provisioning the infrastructure
+- [[http://packer.io/][Packer]] for building the boxes for various providers (Virtualbox, AWS, Kvm, ...)
+- [[http://consul.io][Consul]] for service discovery, DNS
+- [[http://docker.io][Docker]] for application container runtimes, of course
+- [[http://vagrantup.com][Vagrant]] for running the swarm cluster in virtualbox
 
 * Pre-Requisites
 
