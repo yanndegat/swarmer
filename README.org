@@ -592,6 +592,9 @@ bash-4.3# ...
 
 * Considerations & Roadmap
 
+** CoreOS alpha channel
+Yes. Because by now, it's the only coreos version that supports docker 1.10.
+
 ** Use docker-machine
 We may later consider using docker-machine to install & configure the swarm agents. We would then benefit proper & secured configurations.
 
@@ -612,3 +615,5 @@ It would be nice if the server.yml could be used as input to terraform an AWS se
 ** Running on Azure
 
 ** Running on premise
+
+** How to do rolling upgrades of the infrastructure with terraform...?
