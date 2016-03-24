@@ -1,0 +1,11 @@
+[Unit]
+Description=Docker Engine Configurator
+Before=docker.service
+After=user-config.target docker-configurator.path
+Wants=docker-configurator.path
+Requires=user-config.target
+[Service]
+Type=oneshot
+ExecStart=/opt/scripts/docker/docker-configurator
+[Install]
+WantedBy=default.target

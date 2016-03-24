@@ -1,0 +1,23 @@
+#!/bin/bash
+if [[ -d /etc/docker.conf.d ]]; then
+    TMP=$DOCKER_OPTS
+    for conf in /etc/docker.conf.d/*; do
+        logger -t "docker-configurator" "adding conf file $conf"
+        source $conf
+        TMP="$TMP $DOCKER_OPTS"
+    done
+    DOCKER_OPTS=$TMP
+
+    if [[ ! -z $DOCKER_OPTS ]]; then
+        if [[ ! -d /etc/systemd/system/docker.service.d ]]; then
+            mkdir -p /etc/systemd/system/docker.service.d
+        fi
+
+        cat > /etc/systemd/system/docker.service.d/100-docker-configurator.conf <<EOF
+[Service]
+Environment='DOCKER_OPTS=$DOCKER_OPTS'
+EOF
+        logger -t "docker-configurator" "reload systemd daemon"
+        systemctl daemon-reload
+    fi
+fi

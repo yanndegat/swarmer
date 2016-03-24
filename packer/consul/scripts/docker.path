@@ -1,0 +1,4 @@
+[Unit]
+Description=Docker Engine Configuration
+[Path]
+DirectoryNotEmpty=/etc/systemd/system/docker.service.d

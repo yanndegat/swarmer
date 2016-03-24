@@ -1,0 +1,20 @@
+---
+admin_network: 192.168.101.0/24
+consul_joinip: 192.168.101.101
+
+servers:
+  - name    : "swarm-01"
+    box     : "swarm-coreos"
+    memory  : "3072"
+    cpus    : "1"
+    priv_ip : 192.168.101.101
+  - name    : "swarm-02"
+    box     : "swarm-coreos"
+    memory  : "1024"
+    cpus    : "1"
+    priv_ip : 192.168.101.102
+  - name    : "swarm-03"
+    box     : "swarm-coreos"
+    memory  : "1024"
+    cpus    : "1"
+    priv_ip : 192.168.101.103

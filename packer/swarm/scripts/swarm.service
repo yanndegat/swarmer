@@ -1,0 +1,10 @@
+[Unit]
+Description=Dockerized Swarm Manager Service
+After=docker-configurator.service docker.service consul.service
+Requires=docker.service consul.service docker-configurator.service
+[Service]
+Restart=always
+ExecStart=/opt/scripts/swarm/swarm-manage start
+ExecStop=/opt/scripts/swarm/swarm-manage stop
+[Install]
+WantedBy=default.target

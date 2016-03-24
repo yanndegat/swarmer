@@ -1,0 +1,6 @@
+[Unit]
+Description=Consul Configuration
+
+[Path]
+DirectoryNotEmpty=/etc/consul
+MakeDirectory=yes

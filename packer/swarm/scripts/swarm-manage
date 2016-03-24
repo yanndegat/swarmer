@@ -1,0 +1,222 @@
+#!/bin/bash
+SWARM_CONTAINER_NAME="swarm"
+SWARM_MODE="manager"
+SWARM_VERSION="latest"
+ADMIN_NETWORK="default"
+
+if [[ -f "/etc/swarm/swarm.conf" ]]; then
+    . /etc/swarm/swarm.conf
+fi
+
+case $SWARM_MODE in
+    manager)
+        ;;
+    agent)
+        ;;
+    both)
+        ;;
+    *)
+        echo "Wrong swarm mode $SWARM_MODE. Use either manager|agent. Exiting."
+        exit 1
+        ;;
+esac
+
+verbose=0
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hv] [-n CONTAINER_NAME] start|stop|join
+Handles the lifecycle of a swarm service docker container
+
+COMMANDS:
+    start              Starts a swarm manager|agent|both
+    start-agent        Starts a swarm agent
+    start-manager      Starts a swarm manager
+    stop               Stops a swarm manager|agent|both
+    stop-agent         Stops a swarm agent
+    stop-manager       Stops a swarm manager
+    engine-opts        Echo engine opts
+    gen-engine-conf    Generates docker engine conf
+
+OPTIONS:
+    -h                 display this help and exit
+    -n CONTAINER_NAME  sets the name of the docker container.
+                       Defaults to $SWARM_CONTAINER_NAME
+    -v                 verbose mode. Can be used multiple
+                       times for increased verbosity.
+EOF
+}
+
+servicename(){
+    echo "${SWARM_CONTAINER_NAME}-${SWARM_MODE}"
+}
+
+
+gethostadminipaddr(){
+    # Keep trying to retrieve IP addr until it succeeds. Timeouts after 1m
+    now=$(date +%s)
+    timeout=$(( now + 60 ))
+    set +e
+    while :; do
+        if [[ $timeout -lt $(date +%s) ]]; then
+            logger -t "$SWARM_CONTAINER_NAME" "Could not retrieve IP Address. Exiting"
+            exit 5
+        fi
+        ip route | grep -q "^$ADMIN_NETWORK"
+        [ $? -eq 0 ] && break
+        sleep 1
+    done
+
+    printf "$(ip route | grep "^$ADMIN_NETWORK" | sed 's/.*src \([0-9\.]*\) .*/\1/g')"
+}
+
+engine_opts(){
+    IP=$(gethostadminipaddr)
+    echo "-H tcp://$IP:2375 -H unix:///var/run/docker.sock --cluster-store=consul://$IP:8500 --cluster-advertise=$IP:2376"
+}
+
+
+genengineconf(){
+    ENGINE_OPTS=$(engine_opts)
+    if [[ $? != 0 ]]; then
+        logger -t "$SWARM_CONTAINER_NAME" "Can't retrieve consistent engine opts."
+        exit 1
+    fi
+
+    if [[ ! -f /etc/docker.conf.d/60-swarm.conf ]]; then
+        cat > /etc/docker.conf.d/60-swarm.conf <<EOF
+DOCKER_OPTS='$ENGINE_OPTS'
+EOF
+    else
+        source /etc/docker.conf.d/60-swarm.conf
+        if [[ $DOCKER_OPTS != $ENGINE_OPTS ]]; then
+            logger -t "$SWARM_CONTAINER_NAME" "overwrite swarm docker engine opts"
+            cat > /etc/docker.conf.d/60-swarm.conf <<EOF
+DOCKER_OPTS='$ENGINE_OPTS'
+EOF
+        fi
+    fi
+}
+
+removeengineconf(){
+    logger -t "$SWARM_CONTAINER_NAME" "removes swarm docker engine opts"
+    if [[ -f /etc/docker.conf.d/60-swarm.conf ]]; then
+        rm /etc/docker.conf.d/60-swarm.conf
+    fi
+}
+
+start_agent(){
+    logger -t "${SWARM_CONTAINER_NAME}-agent" "start"
+    IP=$(gethostadminipaddr)
+    /usr/bin/docker run --rm --name ${SWARM_CONTAINER_NAME=}-agent \
+                    -v /home/core/${SWARM_CONTAINER_NAME}-agent:/.swarm  \
+                    swarm:$SWARM_VERSION join --advertise $IP:2375 consul://$IP:8500/swarm
+}
+
+start_manager(){
+    logger -t "${SWARM_CONTAINER_NAME}-manager" "start"
+    IP=$(gethostadminipaddr)
+    /usr/bin/docker run --rm --name ${SWARM_CONTAINER_NAME}-manager \
+                    -p $IP:4000:4000 \
+                    -v /home/core/${SWARM_CONTAINER_NAME}-manager:/.swarm  \
+                    swarm:$SWARM_VERSION manage -H :4000 --replication --advertise $IP:4000 consul://$IP:8500/swarm
+}
+
+start() {
+    case $SWARM_MODE in
+        manager)
+            start_manager
+            ;;
+        agent)
+            start_agent
+            ;;
+        both)
+            start_manager &
+            PIDM=$!
+            start_agent &
+            PIDA=$!
+            wait $PIDM $PIDA
+            ;;
+    esac
+}
+
+stop_service() {
+    logger -t "${SWARM_CONTAINER_NAME}-$1" "stop"
+   if (docker ps | grep -q ${SWARM_CONTAINER_NAME}-$1); then
+        /usr/bin/docker stop -t 2 ${SWARM_CONTAINER_NAME}-$1 >&2
+    fi
+    if (docker ps -a | grep -q ${SWARM_CONTAINER_NAME}-$1); then
+        /usr/bin/docker rm ${SWARM_CONTAINER_NAME}-$1 >&2
+    fi
+}
+
+
+stop() {
+    case $SWARM_MODE in
+        manager)
+            stop_service manager
+            ;;
+        agent)
+            stop_service agent
+            ;;
+        both)
+            stop_service manager
+            stop_service agent
+            ;;
+    esac
+
+}
+
+OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
+while getopts ":hv:n:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        v)  verbose=$((verbose+1))
+            ;;
+        n)  SWARM_CONTAINER_NAME=$OPTARG
+            ;;
+        '?')
+            show_help >&2
+            exit 2
+            ;;
+    esac
+done
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+case $1 in
+    start-agent)
+        start_agent
+        ;;
+    engine-opts)
+        engine_opts
+        ;;
+    gen-engine-conf)
+        genengineconf
+        ;;
+    remove-engine-conf)
+        removeengineconf
+        ;;
+    start-manager)
+        start_manager
+        ;;
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    stop-agent)
+        stop agent
+        ;;
+    stop-manager)
+        stop manager
+        ;;
+    *)
+        echo "unhandled command: $1" >&2
+        exit 3
+        ;;
+esac

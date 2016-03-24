@@ -1,0 +1,75 @@
+{
+  "builders": [
+    {
+      "name": "aws",
+      "type": "amazon-ebs",
+      "region": "{{user `aws-region`}}",
+      "source_ami": "{{user `aws-source-ami`}}",
+      "instance_type": "t2.medium",
+      "ssh_username": "core",
+      "ami_name": "swarm-coreos-{{timestamp}}"
+    },
+    {
+      "name": "vbox",
+      "type": "virtualbox-ovf",
+      "source_path": "{{user `ovf-source-path`}}",
+      "ssh_username": "core",
+      "ssh_key_path" : "./vagrant_private_key",
+      "output_directory": "builds/coreos",
+      "headless": true,
+      "ssh_host_port_min": 2222,
+      "ssh_host_port_max": 2229,
+      "ssh_port": 22,
+      "ssh_wait_timeout": "5m",
+      "vm_name": "swarm-packer",
+      "shutdown_command": "sudo -S shutdown -P now",
+      "vboxmanage": [
+        [ "modifyvm", "{{.Name}}", "--memory", "1024" ],
+        [ "modifyvm", "{{.Name}}", "--cpus", "1" ]
+      ],
+      "guest_additions_mode": "disable"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "scripts/swarm.service",
+      "destination" : "/tmp/swarm.service"
+    },
+    {
+      "type": "file",
+      "source": "scripts/registrator.service",
+      "destination" : "/tmp/registrator.service"
+    },
+    {
+      "type": "file",
+      "source": "scripts/swarm-manage",
+      "destination" : "/tmp/swarm-manage"
+    },
+    {
+      "type": "file",
+      "source": "scripts/60-swarm.conf",
+      "destination" : "/tmp/60-swarm.conf"
+    },
+    {
+      "type": "file",
+      "source": "scripts/registrator-manage",
+      "destination" : "/tmp/registrator-manage"
+    },
+    {
+      "type": "shell",
+      "scripts": [ "scripts/fini.sh" ]
+    }
+  ],
+ "post-processors": [
+    {
+      "type": "vagrant",
+      "output": "./builds/swarm-coreos.box"
+    }
+  ],
+  "variables": {
+    "aws-region": "eu-west-1",
+    "aws-source-ami":"ami-81aa1af2",
+    "ovf-source-path": ""
+  }
+}

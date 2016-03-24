@@ -1,0 +1,84 @@
+#!/bin/bash
+
+REGISTRATOR_CONTAINER_NAME="registrator"
+REGISTRATOR_VERSION="latest"
+
+if [[ -f "/etc/registrator/registrator.conf" ]]; then
+    . /etc/registrator/registrator.conf
+fi
+
+verbose=0
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hv] [-n CONTAINER_NAME] start|stop|join
+Handles the lifecycle of a registrator service docker container
+
+COMMANDS:
+    start              Starts a registrator
+    stop               Stops a registrator
+
+OPTIONS:
+    -h                 display this help and exit
+    -n CONTAINER_NAME  sets the name of the docker container.
+                       Defaults to $REGISTRATOR_CONTAINER_NAME
+    -v                 verbose mode. Can be used multiple
+                       times for increased verbosity.
+EOF
+}
+
+servicename(){
+    echo "${REGISTRATOR_CONTAINER_NAME}"
+}
+
+start() {
+    stop
+    /usr/bin/docker run -d --net=host \
+                    -v /var/run/docker.sock:/tmp/docker.sock \
+                    --name $(servicename)  \
+                    gliderlabs/registrator:${REGISTRATOR_VERSION} consul://localhost:8500
+}
+
+stop() {
+    if (docker ps | grep -q $(servicename)); then
+        /usr/bin/docker stop -t 2 $(servicename) >&2
+    fi
+    if (docker ps -a | grep -q $(servicename)); then
+        /usr/bin/docker rm $(servicename) >&2
+    fi
+}
+
+OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
+while getopts ":hv:n:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        v)  verbose=$((verbose+1))
+            ;;
+        n)  REGISTRATOR_CONTAINER_NAME=$OPTARG
+            ;;
+        '?')
+            show_help >&2
+            exit 2
+            ;;
+    esac
+done
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+case $1 in
+    start)
+        logger -t "$(servicename)" "start"
+        start
+        ;;
+    stop)
+        logger -t "$(servicename)" "stop"
+        stop
+        ;;
+    *)
+        echo "unhandled command: $1" >&2
+        exit 3
+        ;;
+esac

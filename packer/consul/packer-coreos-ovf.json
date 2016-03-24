@@ -1,0 +1,60 @@
+{
+  "builders": [
+    {
+      "name": "vbox",
+      "type": "virtualbox-iso",
+      "iso_checksum": "{{user `checksum`}}",
+      "iso_checksum_type": "{{user `checksum_type`}}",
+      "iso_url": "http://{{user `channel`}}.release.core-os.net/amd64-usr/{{user `version`}}/coreos_production_iso_image.iso",
+      "guest_os_type" : "Linux26_64",
+      "ssh_username": "core",
+      "http_directory": "files",
+      "disk_size": 5000,
+      "hard_drive_interface" : "sata",
+      "output_directory": "builds/coreos",
+      "headless": true,
+      "boot_wait" : "15s",
+      "ssh_key_path": "./vagrant_private_key",
+      "ssh_host_port_min": 2222,
+      "ssh_host_port_max": 2229,
+      "ssh_port": 22,
+      "ssh_wait_timeout": "5m",
+      "vm_name": "base",
+      "shutdown_command": "sudo -S shutdown -P now",
+      "vboxmanage": [
+        [ "modifyvm", "{{.Name}}", "--memory", "1024" ],
+        [ "modifyvm", "{{.Name}}", "--cpus", "1" ]
+      ],
+      "guest_additions_mode": "disable",
+      "boot_command": [
+        "sudo -i<enter>",
+        "systemctl stop sshd.socket<enter>",
+        "wget http://{{ .HTTPIP }}:{{ .HTTPPort }}/install.yml<enter>",
+        "cat install.yml<enter>",
+        "coreos-install -d /dev/sda -C {{user `channel`}} -c install.yml<enter>",
+        "reboot<enter>"
+      ]
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "scripts/user-config-ovfenv.path",
+      "destination" : "/tmp/user-config-ovfenv.path"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sudo mv /tmp/user-config-ovfenv.path /etc/systemd/system/",
+        "sudo rm -Rf /etc/docker/key.json",
+        "sudo systemctl disable update-engine"
+      ]
+    }
+  ],
+  "variables": {
+    "channel": "alpha",
+    "version": "991.0.0",
+    "checksum_type": "md5",
+    "checksum": "45cc5c753ecc959aa6ed62b6c683c7d3"
+  }
+}

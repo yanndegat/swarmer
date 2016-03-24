@@ -1,0 +1,68 @@
+{
+  "builders": [
+    {
+      "name": "aws",
+      "type": "amazon-ebs",
+      "region": "{{user `aws-region`}}",
+      "source_ami": "{{user `aws-source-ami`}}",
+      "instance_type": "t2.medium",
+      "ssh_username": "core",
+      "ami_name": "swarmer-coreos-{{timestamp}}"
+    },
+    {
+      "name": "dev",
+      "type": "qemu",
+      "http_directory": "files",
+      "iso_url": "{{user `qcow2_path`}}",
+      "iso_checksum": "{{user `qcow2_checksum`}}",
+      "iso_checksum_type": "{{user `qcow2_checksum_type`}}",
+      "disk_image" :true,
+      "output_directory": "builds/coreos",
+      "disk_size": 5000,
+      "qemuargs": [[ "-m", "1024M" ]],
+      "format": "qcow2",
+      "headless": false,
+      "accelerator": "kvm",
+      "ssh_username": "core",
+      "ssh_private_key_file" : "{{user `ssh_key_path`}}",
+      "ssh_host_port_min": 2222,
+      "ssh_host_port_max": 2229,
+      "ssh_port": 22,
+      "ssh_wait_timeout": "20s",
+      "vm_name": "swarm",
+      "net_device": "virtio-net",
+      "disk_interface": "virtio",
+      "shutdown_command": "sudo -S shutdown -P now"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "files/registrator.service",
+      "destination" : "/tmp/registrator.service"
+    },
+    {
+      "type": "file",
+      "source": "{{user `src`}}",
+      "destination" : "/tmp/src.tar.gz"
+    },
+    {
+      "type": "file",
+      "source": "scripts/registrator-manage",
+      "destination" : "/tmp/registrator-manage"
+    },
+    {
+      "type": "shell",
+      "script": "scripts/fini.sh"
+    }
+  ],
+  "variables": {
+    "aws-region": "eu-west-1",
+    "aws-source-ami":"ami-81aa1af2",
+    "src":"./builds/src.tar.gz",
+    "qcow2_checksum_type": "md5",
+    "qcow2_checksum": "b07e8db43c78a09b42bc009311ffe14b",
+    "qcow2_path" : "/tmp/consul",
+    "ssh_key_path" : "/tmp/key"
+  }
+}
