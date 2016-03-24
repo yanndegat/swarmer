@@ -1,5 +1,6 @@
 #+TITLE: Swarmer: a Swarm Cluster Maker
-
+#+OPTIONS: toc:2
+ 
 * Description
 
 Swarmer is an open source project to help people deploying proper configured docker swarm clusters on AWS.
@@ -70,12 +71,13 @@ Once you have all the required tools installed on your box, you can follow this 
 
 - Every component of the system must be able to boot/reboot without having to be provisionned with configuration elements other than via cloud init.
 - Every component of the system must be able to discover its pairs and join them
-- If a component can't boot properly, it must die.
+- If a component can't boot properly, it must be considered as dead. Don't try to fix it.
+
 
 *** Swarmer is architectured with the following components :
 
 - a consul cluster setup, which consists of a set of consul agents running in "server" mode, and additionnal nodes running in "agent" mode.
-  The consul cluster will be used :
+  The consul cluster could be used :
   - as a distributed key/value store
   - as a service discovery
   - as a dns server
@@ -98,6 +100,8 @@ There are 3 boxes which have to be built:
 - a consul box which inherits from the base box
 - a swarm box which inherits from the consul box
 
+IMPORTANT! To build the vagrant boxes, you can't use the container toolbox, you have to install packer on your machine.
+
 **** Base box
 The base box is based on the 991.0.0 coreos iso image. This box will be used as a parent box for the consul and swarm boxes. As its build is pretty long and isn't very reliable, this basebox is mainly useful to speed the build phase of the consul and swarm boxes.
 
@@ -107,9 +111,7 @@ It contains the vagrant insecure public key.
 #+BEGIN_SRC bash
 cd packer/consul
 make coreos-ovf
-...
 #+END_SRC
-
 
 **** Consul box
 The consul box is based on the coreos-ovf base image previously built. It contains :
@@ -121,9 +123,7 @@ The consul box is based on the coreos-ovf base image previously built. It contai
 #+BEGIN_SRC bash
 cd packer/consul
 make vbox
-...
 #+END_SRC
-
 
 **** Swarm box
 The swarm box is based on the consul base ovf image previously built. It contains :
@@ -135,13 +135,15 @@ The swarm box is based on the consul base ovf image previously built. It contain
 #+BEGIN_SRC bash
 cd packer/swarm
 make vbox
-....
 #+END_SRC
 
 
 *** Booting the swarm cluster
 
 #+BEGIN_SRC bash
+cp servers.yml.example servers.yml
+vi servers.yml
+...
 vagrant up
 ...
 export DOCKER_HOST=192.168.101.101:4000
