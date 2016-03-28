@@ -15,9 +15,6 @@ sudo mv /tmp/registrator.service /etc/systemd/system
 sudo systemctl enable registrator.service
 sudo mv /tmp/60-swarm.conf /etc/docker.conf.d/
 
-#docker conf
-sudo mkdir /etc/docker.conf.d
-
 #cleanup
 rm -Rf ~/.ssh/authorized_keys
 sudo rm -Rf /etc/docker/key.json

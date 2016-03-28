@@ -9,7 +9,7 @@
       "guest_os_type" : "Linux26_64",
       "ssh_username": "core",
       "http_directory": "files",
-      "disk_size": 5000,
+      "disk_size": 15000,
       "hard_drive_interface" : "sata",
       "output_directory": "builds/coreos",
       "headless": true,
