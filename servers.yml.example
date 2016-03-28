@@ -1,6 +1,7 @@
 ---
 admin_network: 192.168.101.0/24
 consul_joinip: 192.168.101.101
+#docker_registry: registry_host:regsitry_port
 
 servers:
   - name    : "swarm-01"

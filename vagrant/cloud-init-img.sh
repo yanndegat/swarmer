@@ -5,7 +5,8 @@ BUILDDIR=$BASEDIR/../builds
 INSTANCE_ID=${INSTANCE_ID:-"myinstance"}
 CONSUL_JOINIPADDR=${JOINIPADDR:-""}
 CLUSTER_SIZE=${CLUSTER_SIZE:-3}
-REGISTRY_ADDRESS="$(ip route | grep default | sed 's/.*src \([0-9\.]*\).*$/\1/g'):5000"
+HOST_IP="$(ip route | grep default | sed 's/.*src \([0-9\.]*\).*$/\1/g')"
+DOCKER_REGISTRY=${DOCKER_REGISTRY:-"$HOST_IP:5000"}
 IMG=$BUILDDIR/$INSTANCE_ID/cloudinit.img
 VDI=$BUILDDIR/$INSTANCE_ID/cloudinit.vdi
 CLOUDINITDIR=$BUILDDIR/$INSTANCE_ID/openstack/latest
@@ -59,7 +60,7 @@ write_files:
     permissions: "0644"
     owner: "root"
     content: |
-             DOCKER_OPTS="--insecure-registry=$REGISTRY_ADDRESS"
+             DOCKER_OPTS="--insecure-registry=$DOCKER_REGISTRY"
 EOF
 
 dd if=/dev/zero of=$IMG bs=1k count=256 >&2

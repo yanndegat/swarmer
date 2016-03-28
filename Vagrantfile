@@ -13,6 +13,7 @@ require 'erb'
 spec = YAML.load_file(File.join(File.dirname(__FILE__), 'servers.yml'))
 admin_network = spec['admin_network']
 consul_joinip = spec['consul_joinip']
+docker_registry = spec['docker_registry']
 servers = spec['servers']
 
 # Create and configure the VMs
@@ -30,7 +31,7 @@ Vagrant.configure("2") do |config|
   servers.each do |server|
 
     # create cloud-init device
-    cloudinit_img=%x[INSTANCE_ID=#{server['name']} ADMIN_NETWORK=#{admin_network} INSTANCE_IP=#{server['priv_ip']} JOINIPADDR=#{consul_joinip} CLUSTER_SIZE=#{servers.size} vagrant/cloud-init-img.sh 2>/dev/null]
+    cloudinit_img=%x[INSTANCE_ID=#{server['name']} ADMIN_NETWORK=#{admin_network} INSTANCE_IP=#{server['priv_ip']} JOINIPADDR=#{consul_joinip} DOCKER_REGISTRY=#{docker_registry} CLUSTER_SIZE=#{servers.size} vagrant/cloud-init-img.sh 2>/dev/null]
 
     if $?.exitstatus != 0
       abort("could not create cloudconfig.")

@@ -207,6 +207,27 @@ docker run --rm -it alpine /bin/sh
 / # ...
 #+END_SRC
 
+*** Using a private registry
+
+If you inspect the docker engines configuration on each swarm node, you'll notice that an insecure registry targeting your private IP has been added.
+
+If you start a local docker registry on your box, you'll ease and fasten the download of your private docker images.
+
+#+BEGIN_SRC bash
+export DOCKER_HOST=
+export MYIP="$(ip route | grep default | sed 's/.*src \([0-9\.]*\).*$/\1/g')"
+docker run -d --net host --name registry registry:2
+docker tag myimage:latest $MYIP:5000/myimage:latest
+docker push $MYIP:5000/myimage:latest
+export DOCKER_HOST=192.168.101.101:4000
+docker pull $MYIP:5000/myimage:latest
+swarm-01: Pulling 192.168.0.43:5000/myimage:latest...
+swarm-03: Pulling 192.168.0.43:5000/myimage:latest... : downloaded
+swarm-02: Pulling 192.168.0.43:5000/myimage:latest... : downloaded
+...
+docker run --rm -it myimage:latest
+...
+#+END_SRC
 
 *** Troubleshootings
 
