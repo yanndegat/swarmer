@@ -1,6 +1,9 @@
 #+TITLE: Swarmer: a Swarm Cluster Maker
 #+OPTIONS: toc:2
+#+SETUPFILE: theme.setup
  
+Note: you should prefer reading the [[README.html]] file in your browser. 
+
 * Description
 
 Swarmer is an open source project to help people deploying proper configured docker swarm clusters on AWS.
