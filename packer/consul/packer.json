@@ -38,6 +38,11 @@
     },
     {
       "type": "file",
+      "source": "scripts/dnsmasq.service",
+      "destination" : "/tmp/dnsmasq.service"
+    },
+    {
+      "type": "file",
       "source": "scripts/consul.service",
       "destination" : "/tmp/consul.service"
     },
