@@ -1,14 +1,27 @@
 #!/bin/bash
 
-/usr/bin/docker pull swarm:1.1.3
-sudo mkdir -p /opt/scripts/{swarm,registrator}
+sudo mkdir -p /opt/scripts/{swarm,registrator,registry}
+
 #swarm
+/usr/bin/docker pull swarm:1.1.3
 sudo mv /tmp/swarm-manage /opt/scripts/swarm/swarm-manage
 sudo chmod +x /opt/scripts/swarm/swarm-manage
 sudo mv /tmp/swarm.service /etc/systemd/system
 sudo systemctl enable swarm.service
 
+#registry
+/usr/bin/docker pull registry:2
+sudo mv /tmp/start-registry /opt/scripts/registry/start-registry
+sudo chmod +x /opt/scripts/registry/start-registry
+sudo mv /tmp/registry.service /etc/systemd/system
+sudo systemctl enable registry.service
+cat > /tmp/private-registry.conf <<EOF
+DOCKER_OPTS="--insecure-registry=registry.service.consul"
+EOF
+sudo cp /tmp/private-registry.conf /etc/docker.conf.d/
+
 #registrator
+/usr/bin/docker pull gliderlabs/registrator:v6
 sudo mv /tmp/registrator-manage /opt/scripts/registrator/registrator-manage
 sudo chmod +x /opt/scripts/registrator/registrator-manage
 sudo mv /tmp/registrator.service /etc/systemd/system

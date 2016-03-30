@@ -1,0 +1,44 @@
+#!/bin/bash
+BASEDIR="$(readlink -f $(dirname $0))/.."
+CONTAINER_NAME=${CONTAINER_NAME:-"registry"}
+ADMIN_NETWORK=${ADMIN_NETWORK:-"default"}
+HOST_IP="$(ip route | grep $ADMIN_NETWORK | sed 's/.*src \([0-9\.]*\).*$/\1/g')"
+
+#targets swarm
+export DOCKER_HOST=$HOST_IP:4000
+
+registry-exists(){
+    docker inspect $CONTAINER_NAME > /dev/null 2>&1
+    [[ $? -eq 0 ]]
+}
+
+registry-running(){
+    [[ $(docker inspect --format '{{.State.Status}}' $CONTAINER_NAME) == "running" ]]
+}
+
+touch /etc/registry.conf
+
+CONSUL_SESSION_ID=$(curl -XPUT "http://localhost:8500/v1/session/create" \
+     -d '{"Name":"'$(hostname)'", "TTL": "120s", "LockDelay" : "120s"}' 2>/dev/null | jq '.ID' | sed 's/"//g' || exit 1)
+
+LOCKED=$(curl -XPUT "http://localhost:8500/v1/kv/swarmer/start-registry-lock?acquire=$CONSUL_SESSION_ID" 2>/dev/null || exit 1)
+
+if [[ "$LOCKED" != "true" ]]; then
+    echo $LOCKED
+    echo "start-registry-lock already acquired".
+    exit 0
+fi
+
+if ! registry-exists ; then
+    sudo docker create \
+         --net host \
+         --name $CONTAINER_NAME \
+         -p 5000 \
+         -e reschedule:on-node-failure \
+         --env-file=/etc/registry.conf \
+         registry:2 >&2 || exit 1
+fi
+
+if ! registry-running ; then
+    sudo docker start $CONTAINER_NAME >&2 || exit 1
+fi

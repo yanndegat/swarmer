@@ -43,6 +43,16 @@
     },
     {
       "type": "file",
+      "source": "scripts/registry.service",
+      "destination" : "/tmp/registry.service"
+    },
+    {
+      "type": "file",
+      "source": "scripts/start-registry",
+      "destination" : "/tmp/start-registry"
+    },
+    {
+      "type": "file",
       "source": "scripts/swarm-manage",
       "destination" : "/tmp/swarm-manage"
     },

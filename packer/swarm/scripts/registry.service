@@ -1,0 +1,11 @@
+[Unit]
+Description=Private Docker Registry
+PartOf=swarm.service
+After=swarm.service
+Requires=swarm.service consul.service
+[Service]
+Restart=always
+RestartSec=2min
+ExecStart=/opt/scripts/registry/start-registry
+[Install]
+WantedBy=default.target

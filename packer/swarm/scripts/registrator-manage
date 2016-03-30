@@ -1,6 +1,6 @@
 #!/bin/bash
 REGISTRATOR_CONTAINER_NAME="registrator"
-REGISTRATOR_VERSION="latest"
+REGISTRATOR_VERSION="v6"
 ADMIN_NETWORK="default"
 
 if [[ -f "/etc/registrator/registrator.conf" ]]; then
