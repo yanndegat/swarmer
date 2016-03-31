@@ -89,6 +89,8 @@ Once you have all the required tools installed on your box, you can follow this 
 - a swarm cluster setup, which consists of a set of swarm agents running in "server" mode, and additionnal nodes running in agent mode.
   Every swarm node will also run a consul agent and a registrator service to declare every running container in consul.
 
+- an insecure private registry which is started automatically by a random swarm node. It's registered under the dns address registry.service.consul. If this node is down, it will be restarted by another one within a few seconds. On AWS, it is possible to configure the registry's backend to target a S3 bucket.
+
 Some nodes could play both "consul server" and "swarm server" roles to avoid booting too many servers for small cluster setups.
 
 
@@ -210,7 +212,31 @@ docker run --rm -it alpine /bin/sh
 / # ...
 #+END_SRC
 
-*** Using a private registry
+
+*** Using the private registry
+The private insecure registry which is automatically started on the swarm cluster is registered on the "regsitry.service.consul" name. So you have to tag & push docker images with this name if you want the nodes to be able to download your images. To do so, your box has to resolv the correct host on which the registry is running. To help you push images to this registry, a docker-compose file is provided ([[file:/proxy-registry-compose.yml]]).
+
+This compose file starts a consul agent and a dnsmasq service with net=host. The agent is configured to join the consul cluster.
+
+#+BEGIN_SRC bash
+$ # check your /etc/resolv.conf file
+$ cat /etc/resolv.conf
+nameserver 127.0.0.1
+...
+$ # eventually run the following command for your next boot
+$ sudo su
+root $ echo "nameserver 127.0.0.1" > /etc/resolv.conf.head
+root $ exit
+$ docker-compose -d -f proxy-registry-compose.yml up
+$ curl registry.service.consul:5000/v2/_catalog
+{"repositories":[]}
+$ ...
+#+END_SRC
+
+You can now push images to this registry.
+
+
+*** Using a custom private registry
 
 If you inspect the docker engines configuration on each swarm node, you'll notice that an insecure registry targeting your private IP has been added.
 
