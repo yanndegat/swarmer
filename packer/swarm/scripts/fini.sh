@@ -31,3 +31,4 @@ sudo mv /tmp/60-swarm.conf /etc/docker.conf.d/
 #cleanup
 rm -Rf ~/.ssh/authorized_keys
 sudo rm -Rf /etc/docker/key.json
+sudo rm -Rf /var/lib/consul

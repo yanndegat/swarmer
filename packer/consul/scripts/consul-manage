@@ -82,8 +82,8 @@ start() {
 
 getjoinipaddr(){
     JOIN=
-    if [[ $? == 0 ]] && [[ -f $FILE ]]; then
-        JOIN="$(ls -1 $MEMBERS_DIR | grep '^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+$' | head -1)"
+    if [[ -d $MEMBERS_DIR ]]; then
+        JOIN=$(echo $(ls -1 $MEMBERS_DIR | grep '^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+$') | sed 's/ /,/g')
     fi
 
     if [[ ! -z $JOIN ]]; then

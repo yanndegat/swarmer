@@ -2,11 +2,14 @@
 
 docker pull andyshinn/dnsmasq
 
+
+CONSUL_VERSION=0.6.4
+
 sudo mkdir -p /opt/scripts/consul
-sudo wget https://releases.hashicorp.com/consul/0.6.3/consul_0.6.3_linux_amd64.zip
-sudo unzip consul_0.6.3_linux_amd64.zip
+sudo wget https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
+sudo unzip consul_${CONSUL_VERSION}_linux_amd64.zip
 sudo mv consul /opt/scripts/consul/consul
-sudo rm consul_0.6.3_linux_amd64.zip
+sudo rm consul_${CONSUL_VERSION}_linux_amd64.zip
 
 sudo mv /tmp/consul-manage /opt/scripts/consul/consul-manage
 sudo chmod +x /opt/scripts/consul/consul-manage
