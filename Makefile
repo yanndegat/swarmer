@@ -11,25 +11,25 @@ git-pull:
 build: ## 	same as build-no-cache
 build: test 
 	docker build --pull=true -t $(IMAGE):$(TAG) .
-	echo $(TAG) > .last_tag.$(IMAGE)
+	echo $(TAG) > .last_tag
 
 build-no-pull: ## git-pull build using local cache not to pulling a fresh image from docker repository
 build-no-pull: test git-pull 
 	docker build -f -t $(IMAGE):$(TAG) .
-	echo $(TAG) > .last_tag.$(IMAGE)
+	echo $(TAG) > .last_tag
 
 
 build-no-cache: ## git-pull and build IGNORING local cache and force to pull a fresh image from docker repository
 build-no-cache: test git-pull 
 	docker build --no-cache --pull=true -t $(IMAGE):$(TAG) .
-	echo $(TAG) > .last_tag.$(IMAGE)
+	echo $(TAG) > .last_tag
 
 
 push: ##  	Push last generated build
 push: test 
-	test -s .last_tag.$(IMAGE) || (echo You need to build first ; exit 1)
-	docker push $(IMAGE):`cat .last_tag.$(IMAGE)` && \
-	rm -f .last_tag.$(IMAGE)
+	test -s .last_tag || (echo You need to build first ; exit 1)
+	docker push $(IMAGE):`cat .last_tag` && \
+	rm -f .last_tag
 
 push-latest: ## 	Push local latest tag 
 push-latest: test
@@ -37,8 +37,8 @@ push-latest: test
 
 latest: ## 	Link last build (tag) to the tag latest
 latest: build
-	test -s .last_tag.$(IMAGE) || (echo You need to build first ; exit 1)
-	docker tag -f $(IMAGE):`cat .last_tag.$(IMAGE)` $(IMAGE):latest
+	test -s .last_tag || (echo You need to build first ; exit 1)
+	docker tag -f $(IMAGE):`cat .last_tag` $(IMAGE):latest
 
 test: ##  	Run necessary tests
 	@test -n "$(IMAGE)" || (echo TEST ERROR: You MUST specify IMAGE variable, type make help ; exit 1)
