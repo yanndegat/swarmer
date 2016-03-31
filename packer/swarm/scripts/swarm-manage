@@ -111,6 +111,9 @@ start_agent(){
     IP=$(gethostadminipaddr)
     /usr/bin/docker run --rm --name ${SWARM_CONTAINER_NAME=}-agent \
                     -v /home/core/${SWARM_CONTAINER_NAME}-agent:/.swarm  \
+                    -e SERVICE_2375_CHECK_HTTP=/_ping \
+                    -e SERVICE_2375_CHECK_INTERVAL=15s \
+                    -e SERVICE_2375_CHECK_TIMEOUT=1s \
                     swarm:$SWARM_VERSION join --advertise $IP:2375 consul://$IP:8500/swarm
 }
 
@@ -119,6 +122,9 @@ start_manager(){
     IP=$(gethostadminipaddr)
     /usr/bin/docker run --rm --name ${SWARM_CONTAINER_NAME}-manager \
                     -p $IP:4000:4000 \
+                    -e SERVICE_4000_CHECK_HTTP=/_ping \
+                    -e SERVICE_4000_CHECK_INTERVAL=15s \
+                    -e SERVICE_4000_CHECK_TIMEOUT=1s \
                     -v /home/core/${SWARM_CONTAINER_NAME}-manager:/.swarm  \
                     swarm:$SWARM_VERSION manage -H :4000 --replication --advertise $IP:4000 consul://$IP:8500/swarm
 }

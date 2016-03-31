@@ -5,7 +5,7 @@ After=swarm.service
 Requires=swarm.service consul.service
 [Service]
 Restart=always
-RestartSec=2min
+RestartSec=10s
 ExecStart=/opt/scripts/registry/start-registry
 [Install]
 WantedBy=default.target
