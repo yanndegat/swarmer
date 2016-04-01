@@ -337,6 +337,28 @@ resource "aws_security_group" "nodes" {
         protocol = "tcp"
         self = true
     }
+
+    #docker overlay networking
+    ingress {
+        from_port = 7946
+        to_port = 7946
+        protocol = "tcp"
+        self = true
+    }
+    ingress {
+        from_port = 7946
+        to_port = 7946
+        protocol = "udp"
+        self = true
+    }
+    ingress {
+        from_port = 4789
+        to_port = 4789
+        protocol = "udp"
+        self = true
+    }
+
+
     #docker registry
     ingress {
         from_port = 5000
