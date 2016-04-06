@@ -34,3 +34,8 @@ sudo chmod +x /opt/scripts/docker/docker-configurator
 sudo mkdir -p /etc/systemd/system/docker.service.d
 sudo mv /tmp/docker-configurator.path /etc/systemd/system/
 sudo mv /tmp/docker.path /etc/systemd/system/
+
+sudo systemctl stop update-engine.service
+sudo systemctl disable update-engine.service
+sudo systemctl stop locksmithd.service
+sudo systemctl disable locksmithd.service
