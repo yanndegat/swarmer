@@ -43,7 +43,7 @@ getpubipaddr(){
             logger -t "$SWARM_CONTAINER_NAME" "Could not retrieve IP Address. Exiting"
             exit 5
         fi
-        ip route | grep -q "^PUBLIC_NETWORK"
+        ip route | grep -q "^$PUBLIC_NETWORK"
         [ $? -eq 0 ] && break
         sleep 1
     done
@@ -74,7 +74,7 @@ start() {
     /usr/bin/docker run \
                     -v /var/run/docker.sock:/tmp/docker.sock \
                     --name $(servicename) \
-                    gliderlabs/registrator:${REGISTRATOR_VERSION} -ip=$(getpubipaddr) consul://$(gethostadminipaddr):8500
+                    gliderlabs/registrator:${REGISTRATOR_VERSION} -ip=$(getpubipaddr) consul://$(gethostadminipaddr):8500 -resync 10 -ttl 10
 }
 
 stop() {
