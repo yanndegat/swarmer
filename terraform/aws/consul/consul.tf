@@ -6,6 +6,9 @@ resource "aws_instance" "consul_server_leader" {
     subnet_id = "${var.subnet_id}"
     user_data = <<EOT
 #cloud-config
+coreos:
+  update:
+    reboot-strategy: off
 write_files:
   - path: "/etc/consul/consul.conf"
     permissions: "0644"
@@ -40,6 +43,9 @@ resource "aws_instance" "consul_server_peers" {
     subnet_id = "${var.subnet_id}"
     user_data = <<EOT
 #cloud-config
+coreos:
+  update:
+    reboot-strategy: off
 write_files:
   - path: "/etc/consul/consul.conf"
     permissions: "0644"

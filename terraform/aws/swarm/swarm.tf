@@ -14,6 +14,9 @@ resource "aws_instance" "swarm_node_first" {
 
     user_data = <<EOF
 #cloud-config
+coreos:
+  update:
+    reboot-strategy: off
 write_files:
   - path: "/etc/swarm/swarm.conf"
     permissions: "0644"
@@ -70,6 +73,9 @@ resource "aws_instance" "swarm_node_rest" {
 
     user_data = <<EOF
 #cloud-config
+coreos:
+  update:
+    reboot-strategy: off
 write_files:
   - path: "/etc/swarm/swarm.conf"
     permissions: "0644"
