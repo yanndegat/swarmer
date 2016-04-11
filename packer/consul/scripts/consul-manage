@@ -6,7 +6,6 @@ CONSUL_MODE="server"
 CONSUL_SERVER_OPTS="-server -bootstrap-expect $CONSUL_CLUSTER_SIZE"
 CONSUL_DATADIR="/var/lib/consul"
 CONSUL_OPTS="-data-dir $CONSUL_DATADIR"
-MEMBERS_DIR="$CONSUL_DATADIR/consul-members"
 ADMIN_NETWORK="default"
 CONSUL_BIN=$(readlink -f $(dirname $0))/consul
 
@@ -23,23 +22,20 @@ if [[ ! -d $CONSUL_DATADIR ]]; then
     mkdir -p $CONSUL_DATADIR
 fi
 
-if [[ ! -d $MEMBERS_DIR ]]; then
-    mkdir -p $MEMBERS_DIR
-fi
-
 verbose=0
+
+HOSTIP=$(gethostadminipaddr)
+
 
 # Usage info
 show_help() {
 cat << EOF
-Usage: ${0##*/} [-ahv] [-j JOINIPADDR] [-c CLUSTER_SIZE] start|stop|members
+Usage: ${0##*/} [-ahv] [-j JOINIPADDR] [-c CLUSTER_SIZE] start|stop
 Handles the lifecycle of a consul agent
 
 COMMANDS:
     start              Starts a consul agent
     stop               Stops a consul agent
-    members            Outputs IPs of consul alive servers
-                       within the cluster
 OPTIONS:
     -a                 agent mode only
     -c CLUSTER_SIZE    sets the cluster size expected.
@@ -73,18 +69,14 @@ start() {
         CONSUL_OPTS="$CONSUL_OPTS -retry-join=$JOIN -rejoin"
     fi
 
-    IP=$(gethostadminipaddr)
-    CONSUL_OPTS="$CONSUL_OPTS -advertise=$IP -client=0.0.0.0"
+    CONSUL_OPTS="$CONSUL_OPTS -advertise=$HOSTIP -client=0.0.0.0"
 
     logger -t "$SERVICE_NAME" "Starting agent with opts: $CONSUL_OPTS"
     $CONSUL_BIN agent $CONSUL_OPTS
 }
 
 getjoinipaddr(){
-    JOIN=
-    if [[ -d $MEMBERS_DIR ]]; then
-        JOIN=$(echo $(ls -1 $MEMBERS_DIR | grep '^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+$') | sed 's/ /,/g')
-    fi
+    JOIN=$(peers)
 
     if [[ ! -z $JOIN ]]; then
         echo $JOIN
@@ -117,17 +109,9 @@ stop() {
     $CONSUL_BIN leave
 }
 
-members() {
-    if [[ $? == 0 ]]; then
-        MEMBERS=$($CONSUL_BIN members | tail -n+2 | grep 'server' | grep 'alive' | awk '{print $2}' | cut -d: -f1)
-        if [[ $? != 0 ]]; then
-            exit 1
-        fi
-        rm -f $MEMBERS_DIR/*
-        for m in $MEMBERS; do
-            touch $MEMBERS_DIR/$m
-        done
-        ls -1 $MEMBERS_DIR
+peers() {
+    if [ -d $CONSUL_DATADIR/raft ] && [ -f $CONSUL_DATADIR/raft/peers.json ]; then
+        cat $CONSUL_DATADIR/raft/peers.json | jq '.[]' | paste -d , -s | sed 's/"//g'| sed 's/:8300//g' | sed "s/$HOSTIP[,]*//g"
     fi
 }
 
@@ -162,10 +146,6 @@ case $1 in
     stop)
         logger -t "$SERVICE_NAME" "stop"
         stop
-        ;;
-    members)
-        logger -t "$SERVICE_NAME" "members"
-        members
         ;;
     *)
         echo "unhandled command: $1" >&2

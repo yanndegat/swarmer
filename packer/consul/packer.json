@@ -53,16 +53,6 @@
     },
     {
       "type": "file",
-      "source": "scripts/consul-members.service",
-      "destination" : "/tmp/consul-members.service"
-    },
-    {
-      "type": "file",
-      "source": "scripts/consul-members.timer",
-      "destination" : "/tmp/consul-members.timer"
-    },
-    {
-      "type": "file",
       "source": "scripts/docker-configurator",
       "destination" : "/tmp/docker-configurator"
     },

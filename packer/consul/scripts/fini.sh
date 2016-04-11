@@ -21,11 +21,6 @@ sudo systemctl enable consul.service
 sudo mv /tmp/dnsmasq.service /etc/systemd/system
 sudo systemctl enable dnsmasq.service
 
-sudo mv /tmp/consul-members.service /etc/systemd/system
-sudo mv /tmp/consul-members.timer /etc/systemd/system
-sudo systemctl enable consul-members.service
-sudo systemctl enable consul-members.timer
-
 sudo mv /tmp/docker-configurator.service /etc/systemd/system
 sudo systemctl enable docker-configurator.service
 sudo mkdir -p /opt/scripts/docker
