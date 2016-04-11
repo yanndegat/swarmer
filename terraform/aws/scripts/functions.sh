@@ -7,12 +7,14 @@ BUCKET_NAME="swarmer-${AWS_ACCOUNT}-${STACK_NAME}"
 PACKER_SWARMER_DIR=$BASEDIR/../../packer/swarmer
 PACKER_CONSUL_DIR=$BASEDIR/../../packer/consul
 PACKER_SWARM_DIR=$BASEDIR/../../packer/swarm
+PACKER_BASTION_VPN_DIR=$BASEDIR/../../packer/bastion-vpn
 OUTPUT_DIR=/tmp/output
 
 
 CONSUL_AMI_NAME="consul-coreos"
 SWARM_AMI_NAME="swarm-coreos"
 SWARMER_AMI_NAME="swarmer-coreos"
+BASTION_VPN_AMI_NAME="bastion-vpn"
 
 INIT_AMIS=0
 
@@ -210,7 +212,9 @@ swarm-ami(){
 swarmer-ami(){
    make -C $PACKER_SWARMER_DIR aws CONSUL_AMI_ID=$(_lastamiid $CONSUL_AMI_NAME)
 }
-
+bastion-vpn-ami(){
+   make -C $PACKER_BASTION_VPN_DIR
+}
 
 consul-ami-id(){
    _lastamiid $CONSUL_AMI_NAME
@@ -221,12 +225,15 @@ swarm-ami-id(){
 swarmer-ami-id(){
    _lastamiid $SWARMER_AMI_NAME
 }
-
+bastion-vpn-ami-id(){
+   _lastamiid $BASTION_VPN_AMI_NAME
+}
 
 all-amis(){
     consul-ami
     swarm-ami
     swarmer-ami
+    bastion-vpn-ami
 }
 
 _deregister_amis(){

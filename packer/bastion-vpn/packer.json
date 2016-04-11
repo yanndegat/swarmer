@@ -1,0 +1,38 @@
+{
+  "builders": [
+    {
+      "name": "aws",
+      "type": "amazon-ebs",
+      "region": "{{user `aws-region`}}",
+      "source_ami": "{{user `aws-source-ami`}}",
+      "instance_type": "t2.medium",
+      "ssh_username": "core",
+      "ami_name": "bastion-vpn-{{timestamp}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "scripts/openvpn.service",
+      "destination" : "/tmp/openvpn.service"
+    },
+    {
+      "type": "file",
+      "source": "scripts/init-ovpndata.sh",
+      "destination" : "/tmp/init-ovpndata.sh"
+    },
+    {
+      "type": "file",
+      "source": "scripts/ovpn-client-config.sh",
+      "destination" : "/tmp/ovpn-client-config.sh"
+    },
+    {
+      "type": "shell",
+      "scripts": [ "scripts/fini.sh" ]
+    }
+  ],
+  "variables": {
+    "aws-region": "eu-west-1",
+    "aws-source-ami": "ami-7b971208"
+  }
+}

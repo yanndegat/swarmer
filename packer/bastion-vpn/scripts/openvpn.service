@@ -1,0 +1,12 @@
+[Unit]
+Description=Openvpn Service
+Requires=docker.service
+After=system-config.target
+[Service]
+EnvironmentFile=-/etc/environment
+Restart=on-failure
+ExecStartPre=/opt/init-ovpndata.sh
+ExecStart=/usr/bin/docker run --rm --name OVPN --volumes-from OVPN_DATA -p 1194:1194/udp --cap-add=NET_ADMIN kylemanna/openvpn
+ExecStop=/usr/bin/docker stop OVPN
+[Install]
+WantedBy=default.target

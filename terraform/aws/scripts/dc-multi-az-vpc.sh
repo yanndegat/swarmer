@@ -2,6 +2,7 @@
 
 BASEDIR=$(readlink -f $(dirname $0))/..
 source $BASEDIR/scripts/functions.sh
+TF_VARFILE=/tmp/terraform.$$.tfvars
 
 show_help() {
 cat << EOF
@@ -32,10 +33,16 @@ bootstrap(){
         -r "$AWS_DEFAULT_REGION" \
         -s "$AWS_SECRET_ACCESS_KEY""
 
-   # make vpc
-    $TFCMD -c vpc -i vpc apply
-}
+    BASTION_VPN_AMI=$(bastion-vpn-ami-id)
 
+    #make swarm cluster
+    cat >> $TF_VARFILE <<EOF
+aws_bastion_ami = "${BASTION_VPN_AMI}"
+EOF
+
+   # make vpc
+    $TFCMD -c vpc -i vpc  -f $TF_VARFILE apply
+}
 
 destroy(){
     if [[ $INIT == 1 ]]; then

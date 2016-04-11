@@ -14,9 +14,7 @@ variable "zone_2" {
 }
 
 variable "aws_bastion_ami" {
-    default = {
-        eu-west-1 = "ami-c0993ab3"
-    }
+        default = "ami-6b34b418"
 }
 
 variable "cidr_prefix" {

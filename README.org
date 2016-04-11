@@ -1,8 +1,8 @@
 #+TITLE: Swarmer: a Swarm Cluster Maker
-#+OPTIONS: toc:2
+#+OPTIONS: toc:3
 #+SETUPFILE: theme.setup
  
-Note: you should prefer reading the [[README.html]] file in your browser. 
+Note: you should prefer reading the [[file:/README.html]] file in your browser. 
 
 * Description
 
@@ -18,6 +18,7 @@ Swarmer is built on top of the following components:
 - [[http://consul.io][Consul]] for service discovery, DNS
 - [[http://docker.io][Docker]] for application container runtimes, of course
 - [[http://vagrantup.com][Vagrant]] for running the swarm cluster in virtualbox
+
 
 * Pre-Requisites
 
@@ -143,6 +144,7 @@ make vbox
 #+END_SRC
 
 
+
 *** Booting the swarm cluster
 
 #+BEGIN_SRC bash
@@ -200,64 +202,6 @@ Name: 8e081c5df4b9
 #+END_SRC
 
 
-*** Using the swarm cluster
-
-You can now use your swarm cluster to run docker containers as simply as you would do to run a container on your local docker engine. All you have to do is 
-target the IP of one of your swarm node. 
-
-#+BEGIN_SRC bash
-export DOCKER_HOST=192.168.101.101:4000
-docker pull alpine
-docker run --rm -it alpine /bin/sh
-/ # ...
-#+END_SRC
-
-
-*** Using the private registry
-The private insecure registry which is automatically started on the swarm cluster is registered on the "regsitry.service.consul" name. So you have to tag & push docker images with this name if you want the nodes to be able to download your images. To do so, your box has to resolv the correct host on which the registry is running. To help you push images to this registry, a docker-compose file is provided ([[file:/proxy-registry-compose.yml]]).
-
-This compose file starts a consul agent and a dnsmasq service with net=host. The agent is configured to join the consul cluster.
-
-#+BEGIN_SRC bash
-$ # check your /etc/resolv.conf file
-$ cat /etc/resolv.conf
-nameserver 127.0.0.1
-...
-$ # eventually run the following command for your next boot
-$ sudo su
-root $ echo "nameserver 127.0.0.1" > /etc/resolv.conf.head
-root $ exit
-$ docker-compose -d -f proxy-registry-compose.yml up
-$ curl registry.service.consul:5000/v2/_catalog
-{"repositories":[]}
-$ ...
-#+END_SRC
-
-You can now push images to this registry.
-
-
-*** Using a custom private registry
-
-If you inspect the docker engines configuration on each swarm node, you'll notice that an insecure registry targeting your private IP has been added.
-
-If you start a local docker registry on your box, you'll ease and fasten the download of your private docker images.
-
-#+BEGIN_SRC bash
-export DOCKER_HOST=
-export MYIP="$(ip route | grep default | sed 's/.*src \([0-9\.]*\).*$/\1/g')"
-docker run -d --net host --name registry registry:2
-docker tag myimage:latest $MYIP:5000/myimage:latest
-docker push $MYIP:5000/myimage:latest
-export DOCKER_HOST=192.168.101.101:4000
-docker pull $MYIP:5000/myimage:latest
-swarm-01: Pulling 192.168.0.43:5000/myimage:latest...
-swarm-03: Pulling 192.168.0.43:5000/myimage:latest... : downloaded
-swarm-02: Pulling 192.168.0.43:5000/myimage:latest... : downloaded
-...
-docker run --rm -it myimage:latest
-...
-#+END_SRC
-
 *** Troubleshootings
 
 **** Check the consul agents
@@ -309,7 +253,7 @@ If the agents aren't running, check for any systemd service error with journalct
 ** Try Swarmer on your Amazon AWS Account
 
 Things should be a "little bit harder" than a single vagrant up ;)
-Before booting the instances, we will have to create an ssh keypair and then install a brand new multi-az VPC, with its nat gateways and public and private subnets. We will also add a bastion instance to allow remote ssh connections to the instances that will boot within your VPC.
+Before booting the instances, we will have to create an ssh keypair and then install a brand new multi-az VPC, with its nat gateways and public and private subnets. We will also add a bastion+vpn instance to ease interactions with the services deployed within your VPC.
 
 Then we can boot the Swarmer instances on the proper subnets.
 
@@ -337,7 +281,7 @@ docker run --rm -it \
   -e AWS_DEFAULT_REGION="[AWS_REGION]" \
   -e STACK_NAME="myswarmer" \
   -e AWS_ACCOUNT="[AWS_ACCOUNT]" \
-  -e KEYPAIR_PASSPHRASE="[a passphrase]"
+  -e PASSPHRASE="[a passphrase]"
    swarmer terraform/aws/scripts/dc-init.sh -A init
 ...
 1458667162,,ui,say,==> aws: No volumes to clean up%!(PACKER_COMMA) skipping
@@ -441,70 +385,121 @@ State path: .terraform/terraform.tfstate
 
 *** Configure your access to your swarm cluster
 
-Your cluster is located on a private subnet with no public facing IP. To be able to target it or simply connect to it, you have to establish ssh connections or tunnels through the bastion instance of the VPC. As it can be quite an annoying step, we've made a simple script which generates an ssh config and download the private key that you'll have to copy in your local ssh directory ( probably ~/.ssh ).
+Your cluster is located on a private subnet with no public facing IP. To be able to target it or simply connect to it, you have two options:
+
+- through ssh tunnels
+- through the VPN
+
+**** SSH tunnels
+
+This section describes how to establish ssh connections or tunnels through the bastion instance of the VPC. As it can be quite an annoying step, we've made a simple script which generates an ssh config and download the private key that you'll have to copy in your local ssh directory ( probably ~/.ssh ).
+
+ #+BEGIN_SRC bash
+ docker run --rm -it \ 
+   -e AWS_SECRET_ACCESS_KEY="[AWS_SECRET_ACCESS_KEY]" \
+   -e AWS_ACCESS_KEY_ID="[AWS_ACCESS_KEY_ID]" \
+   -e AWS_DEFAULT_REGION="[AWS_REGION]" \
+   -e STACK_NAME="myswarmer" \
+   -e AWS_ACCOUNT="[AWS_ACCOUNT]" \
+   -e PASSPHRASE="[a passphrase]" \
+   -v /tmp:/output
+    swarmer terraform/aws/scripts/dc-multi-az-simple-swarm.sh config-ssh 
+ ...
+ cat /tmp/config >> ~/.ssh/config
+ #the docker container generates files that belong to the root user
+ sudo cp /tmp/myswarmer.key ~/.ssh
+ sudo chown $USER ~/.ssh/myswarmer.key
+ cat ~/.ssh/config
+ ...
+ Host myswarmer-swarm-zone-a-swarm_manager-0
+    HostName 10.233.1.205
+    IdentityFile ~/.ssh/myswarmer.key
+    ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+
+ Host myswarmer-swarm-zone-a-swarm_manager-1
+    HostName 10.233.1.254
+    IdentityFile ~/.ssh/myswarmer.key
+    ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+
+ Host myswarmer-swarm-zone-a-swarm_manager-2
+    HostName 10.233.1.253
+    IdentityFile ~/.ssh/myswarmer.key
+    ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+
+ Host myswarmer-swarm-zone-b-swarm_manager-0
+    HostName 10.233.3.8
+    IdentityFile ~/.ssh/myswarmer.key
+    ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+
+ Host myswarmer-swarm-zone-b-swarm_manager-1
+    HostName 10.233.3.54
+    IdentityFile ~/.ssh/myswarmer.key
+    ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+
+ Host myswarmer-swarm-zone-b-swarm_manager-2
+    HostName 10.233.3.45
+    IdentityFile ~/.ssh/myswarmer.key
+    ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+
+ Host "10.233.*"
+    IdentityFile ~/.ssh/myswarmer.key
+    ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+ #+END_SRC
+
+ You will notice that there is one entry per host, plus one global entry matching every ip beginning with 10.233.*. This uncommon /16 subnet has been chosen to avoid IP overlapping with your privates subnets. It can be configured if it doesn't suits you. See [[file:terraform/aws/vpc/variables.tf]]. 
+
+ IMPORTANT! Only the hosts that are "up" are added to the config. By "up", we mean that they have at least joined the consul cluster. If you have no host in the config, retrieve the privates ips of your instances through the aws console and ssh into them using their private IP; the global "10.233.*" is dedicated to this.
+
+ You'll also notice that each entry refers to a "myswarmer.key". This is the private ssh key that has been generated during the init phase and uploaded to s3.
+
+
+**** VPN access
+
+This section describes how to establish a vpn connection with openvpn. You need to have a proper install of openvpn on your box. You also need the private ssh key. Refer to the previous section to know how to retrieve it.
+
+The first thing you need is to generate your VPN keys and retrieve the openvpn configuration.
 
 #+BEGIN_SRC bash
-docker run --rm -it \ 
-  -e AWS_SECRET_ACCESS_KEY="[AWS_SECRET_ACCESS_KEY]" \
-  -e AWS_ACCESS_KEY_ID="[AWS_ACCESS_KEY_ID]" \
-  -e AWS_DEFAULT_REGION="[AWS_REGION]" \
-  -e STACK_NAME="myswarmer" \
-  -e AWS_ACCOUNT="[AWS_ACCOUNT]" \
-  -e KEYPAIR_PASSPHRASE="[a passphrase]" \
-  -v /tmp:/output
-   swarmer terraform/aws/scripts/dc-multi-az-simple-swarm.sh config-ssh 
+$ # the ip of the bastion is referred in the generated ssh config, and also 
+$ ssh myswarmer-bastion /opt/ovpn-client-config.sh MYNAME > ~/MYNAME.myswarmer-ovpn.conf
+Generating a 2048 bit RSA private key
+..........................+++
+................+++
+writing new private key to '/etc/openvpn/pki/private/MYNAME.key.XXXXigMGgg'
+-----
+Using configuration from /usr/share/easy-rsa/openssl-1.0.cnf
+Check that the request matches the signature
+Signature ok
+The Subject's Distinguished Name is as follows
+commonName            :ASN.1 12:'MYNAME'
+Certificate is to be certified until Apr  6 15:59:42 2026 GMT (3650 days)
+
+Write out database with 1 new entries
+Data Base Updated
+
+$ sudo openvpn ~/MYNAME.myswarmer-ovpn.conf
 ...
-cat /tmp/config >> ~/.ssh/config
-#the docker container generates files that belong to the root user
-sudo cp /tmp/myswarmer.key ~/.ssh
-sudo chown $USER ~/.ssh/myswarmer.key
-cat ~/.ssh/config
-...
-Host myswarmer-swarm-zone-a-swarm_manager-0
-   HostName 10.233.1.205
-   IdentityFile ~/.ssh/myswarmer.key
-   ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+Fri Apr  8 17:58:48 2016 TLS Error: TLS handshake failed
+Fri Apr  8 17:58:48 2016 SIGUSR1[soft,tls-error] received, process restarting
+Fri Apr  8 17:58:50 2016 WARNING: Your certificate is not yet valid!
+Fri Apr  8 17:58:50 2016 Control Channel Authentication: tls-auth using INLINE static key file
+Fri Apr  8 17:58:50 2016 UDPv4 link local: [undef]
+Fri Apr  8 17:58:50 2016 UDPv4 link remote: [AF_INET]52.48.31.60:1194
+Fri Apr  8 17:58:50 2016 [52.48.31.60] Peer Connection Initiated with [AF_INET]52.48.31.60:1194
+Fri Apr  8 17:58:52 2016 TUN/TAP device tun0 opened
+Fri Apr  8 17:58:52 2016 do_ifconfig, tt->ipv6=0, tt->did_ifconfig_ipv6_setup=0
+Fri Apr  8 17:58:52 2016 /usr/bin/ip link set dev tun0 up mtu 1500
+Fri Apr  8 17:58:52 2016 /usr/bin/ip addr add dev tun0 local 192.168.255.6 peer 192.168.255.5
+Fri Apr  8 17:58:52 2016 Initialization Sequence Completed
 
-Host myswarmer-swarm-zone-a-swarm_manager-1
-   HostName 10.233.1.254
-   IdentityFile ~/.ssh/myswarmer.key
-   ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+$ # get the internal ip of one of the members of the cluster and try to get consul info:
 
-Host myswarmer-swarm-zone-a-swarm_manager-2
-   HostName 10.233.1.253
-   IdentityFile ~/.ssh/myswarmer.key
-   ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
-
-Host myswarmer-swarm-zone-b-swarm_manager-0
-   HostName 10.233.3.8
-   IdentityFile ~/.ssh/myswarmer.key
-   ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
-
-Host myswarmer-swarm-zone-b-swarm_manager-1
-   HostName 10.233.3.54
-   IdentityFile ~/.ssh/myswarmer.key
-   ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
-
-Host myswarmer-swarm-zone-b-swarm_manager-2
-   HostName 10.233.3.45
-   IdentityFile ~/.ssh/myswarmer.key
-   ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
-
-Host "10.233.*"
-   IdentityFile ~/.ssh/myswarmer.key
-   ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+$ curl 10.233.1.145:8500/v1/catalog
+{"consul":[],"swarm-4000":[]}%
+$ # BINGO!
 #+END_SRC
 
-You will notice that there is one entry per host, plus one global entry matching every ip beginning with 10.233.*. This uncommon /16 subnet has been chosen to avoid IP overlapping with your privates subnets. It can be configured if it doesn't suits you. See [[file:terraform/aws/vpc/variables.tf]]. 
 
-IMPORTANT! Only the hosts that are "up" are added to the config. By "up", we mean that they have at least joined the consul cluster. If you have no host in the config, retrieve the privates ips of your instances through the aws console and ssh into them using their private IP; the global "10.233.*" is dedicated to this.
-
-You'll also notice that each entry refers to a "myswarmer.key". This is the private ssh key that has been generated during the init phase and uploaded to s3.
-
-
-*** Play with your swarm cluster
-
-Now we can play with swarm.
 
 **** SSH to a node
 
@@ -526,8 +521,7 @@ core@ip-172-233-3-45 ~ $ ...
 
 **** Create an ssh tunnel to swarm 
 
-You can create an ssh tunnel to ease the deployment of a container from your box
-
+If you don't want to use the VPN, you can create an ssh tunnel to ease the deployment of a container from your box
 
 #+BEGIN_SRC bash
 # you have to replace the 172.233.1.205 ip with the private ip of the node you selected
@@ -607,15 +601,6 @@ Name: a540944837d6
 #+END_SRC
 
 
-**** Deploy a docker container
-
-Quite simple... ( don't forget to launch the ssh tunnel )
-
-#+BEGIN_SRC bash
-export DOCKER_HOST=localhost:4000
-docker run --rm -it alpine /bin/sh
-/ # echo "let's play with docker swarm!"
-#+END_SRC
 
 
 *** Destroy the cluster and the vpc
@@ -640,10 +625,87 @@ bash-4.3# ...
 #+END_SRC
 
 
+* Play with your swarm cluster
+
+Now we can play with swarm.
+
+** Configure DNS resolution
+
+To resolv names, you have to configure a dns service that will forward the requests to consul. A docker-compose file is provided ([[file:/dns-proxy-compose.yml]]).
+
+This compose file starts a dnsmasq service with net=host that will target $CONSULIP consul agent. This only works with vagrant or when the VPN is setup.
+
+#+BEGIN_SRC bash
+$ # check your /etc/resolv.conf file
+$ cat /etc/resolv.conf
+nameserver 127.0.0.1
+...
+$ # eventually run the following command for your next boot
+$ sudo su
+root $ echo "nameserver 127.0.0.1" > /etc/resolv.conf.head
+root $ exit
+$ docker-compose -d -f dns-proxy-compose.yml up -d
+$ curl registry.service.consul:5000/v2/_catalog
+{"repositories":[]}
+$ ...
+#+END_SRC
+
+
+** Using the swarm cluster
+
+You can now use your swarm cluster to run docker containers as simply as you would do to run a container on your local docker engine. All you have to do is 
+target the IP of one of your swarm node. 
+
+#+BEGIN_SRC bash
+export DOCKER_HOST=swarm-4000.service.consul:4000
+docker pull alpine
+docker run --rm -it alpine /bin/sh
+/ # ...
+#+END_SRC
+
+** Using a custom private registry with vagrant
+
+If you inspect the docker engines configuration on each swarm node, you'll notice that an insecure registry targeting your private IP has been added.
+
+If you start a local docker registry on your box, you'll ease and fasten the download of your private docker images.
+
+#+BEGIN_SRC bash
+export DOCKER_HOST=
+export MYIP="$(ip route | grep default | sed 's/.*src \([0-9\.]*\).*$/\1/g')"
+docker run -d --net host --name registry registry:2
+docker tag myimage:latest $MYIP:5000/myimage:latest
+docker push $MYIP:5000/myimage:latest
+export DOCKER_HOST=192.168.101.101:4000
+docker pull $MYIP:5000/myimage:latest
+swarm-01: Pulling 192.168.0.43:5000/myimage:latest...
+swarm-03: Pulling 192.168.0.43:5000/myimage:latest... : downloaded
+swarm-02: Pulling 192.168.0.43:5000/myimage:latest... : downloaded
+...
+docker run --rm -it myimage:latest
+...
+#+END_SRC
+
+
+** Deploy a docker container
+
+Quite simple... ( don't forget to launch the ssh tunnel if you don't use VPN )
+
+#+BEGIN_SRC bash
+export DOCKER_HOST=swarm-4000.service.consul:4000
+docker run --rm -it alpine /bin/sh
+/ # echo "let's play with docker swarm!"
+#+END_SRC
+
+** Using the private registry
+
+The private insecure registry which is automatically started on the swarm cluster is registered on the "registry.service.consul" name. So you have to tag & push docker images with this name if you want the nodes to be able to download your images. 
+
+
 * Considerations & Roadmap
 
 ** CoreOS alpha channel
 Yes. Because by now, it's the only coreos version that supports docker 1.10.
+
 
 ** Use docker-machine
 We may later consider using docker-machine to install & configure the swarm agents. We would then benefit proper & secured configurations.
@@ -654,7 +716,7 @@ There are some caveats running the system services as docker containers, even on
 
 
 ** Monitoring
-There is no monitoring yet, and no centralized log system configured either.
+There is no monitoring yet, and no centralized log system configured either.v
 
 ** Server.yml to bootstrap AWS
 It would be nice if the server.yml could be used as input to terraform an AWS setup.
@@ -662,8 +724,11 @@ It would be nice if the server.yml could be used as input to terraform an AWS se
 
 ** Running on GCE
 
+
 ** Running on Azure
 
+
 ** Running on premise
+
 
 ** How to do rolling upgrades of the infrastructure with terraform...?

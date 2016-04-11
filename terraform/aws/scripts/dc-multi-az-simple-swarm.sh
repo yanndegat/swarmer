@@ -40,17 +40,38 @@ config-ssh(){
     SSH_CONFIG_FILE=/output/config
 
     SSH_OPTS="-oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null"
-    SSH_PROXY_COMMAND="ProxyCommand ssh -l ec2-user -i ~/.ssh/$STACK_NAME.key $SSH_OPTS $BASTION_IP nc %h %p"
+    SSH_PROXY_COMMAND="ProxyCommand ssh -l core -i ~/.ssh/$STACK_NAME.key $SSH_OPTS $BASTION_IP ncat %h %p"
 
     for host in $(ssh -q -o "$SSH_PROXY_COMMAND" $SSH_OPTS -i ~/.ssh/$STACK_NAME.key core@$CONSUL_IP "/opt/scripts/consul/consul members" | tail -n+2 | tr -s ' ' '|' | cut -d'|' -f1,2); do
         HOSTNAME=$(echo $host | cut -d'|' -f1 | sed "s/'//g")
         HOSTIP=$(echo $host | cut -d'|' -f2 | cut -d':' -f1)
-        printf "Host %s\n   HostName %s\n   IdentityFile ~/.ssh/$STACK_NAME.key \n   %s\n\n" "$HOSTNAME" "$HOSTIP" "$SSH_PROXY_COMMAND" >> $SSH_CONFIG_FILE
+
+        cat >> $SSH_CONFIG_FILE <<EOF
+Host $HOSTNAME
+   HostName $HOSTIP
+   IdentityFile ~/.ssh/$STACK_NAME.key
+   $SSH_PROXY_COMMAND
+
+EOF
     done
+
+    #Bastion block
+        cat >> $SSH_CONFIG_FILE <<EOF
+Host ${STACK_NAME}-bastion
+   HostName $BASTION_IP
+   User core
+   IdentityFile ~/.ssh/$STACK_NAME.key
+
+EOF
 
     #General block
     WILDCARD="$(echo $CONSUL_IP | sed 's/\([0-9]*\.[0-9]*\)\.[0-9]*\.[0-9]*/\1.*/g' )"
-    printf "Host %s\n   IdentityFile ~/.ssh/$STACK_NAME.key \n   %s\n\n" "$WILDCARD" "$SSH_PROXY_COMMAND" >> $SSH_CONFIG_FILE
+        cat >> $SSH_CONFIG_FILE <<EOF
+Host $WILDCARD
+   IdentityFile ~/.ssh/$STACK_NAME.key
+   $SSH_PROXY_COMMAND
+
+EOF
 }
 
 get-keypair(){

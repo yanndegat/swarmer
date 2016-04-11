@@ -206,24 +206,10 @@ resource "aws_route_table_association" "region-private-b" {
     route_table_id = "${aws_route_table.region-private-b.id}"
 }
 
-# Bastion
-resource "aws_security_group" "bastion" {
-    name = "bastion"
-    description = "Allow SSH traffic from the internet"
-
-    ingress {
-        from_port = 22
-        to_port = 22
-        protocol = "tcp"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
-    egress {
-        from_port = 22
-        to_port = 22
-        protocol = "tcp"
-        cidr_blocks = ["${lookup(var.cidr_prefix, var.aws_region)}.0.0/16"]
-    }
-
+# Public
+resource "aws_security_group" "public" {
+    name = "public"
+    description = "Allow traffic from the internet"
     vpc_id = "${aws_vpc.default.id}"
   tags {
      Name = "${var.stack_name}"
@@ -234,14 +220,146 @@ resource "aws_security_group" "bastion" {
       create_before_destroy = true
     }
 }
+resource "aws_security_group_rule" "public_to_nodes_tcp" {
+    type = "egress"
+    from_port = 32768
+    to_port = 60999
+    protocol = "tcp"
+
+    security_group_id = "${aws_security_group.public.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "public_to_nodes_udp" {
+    type = "egress"
+    from_port = 32768
+    to_port = 60999
+    protocol = "udp"
+
+    security_group_id = "${aws_security_group.public.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+
+
+resource "aws_security_group" "bastion" {
+    name = "bastion"
+    description = "Allow SSH traffic from the internet"
+
+  vpc_id = "${aws_vpc.default.id}"
+  tags {
+     Name = "${var.stack_name}"
+  }
+
+}
+
+resource "aws_security_group_rule" "bastion_from_ssh" {
+    type = "ingress"
+    from_port = 22
+    to_port = 22
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.bastion.id}"
+    cidr_blocks = ["0.0.0.0/0"]
+}
+
+resource "aws_security_group_rule" "bastion_from_vpn" {
+    type = "ingress"
+    from_port = 1194
+    to_port = 1194
+    protocol = "udp"
+    security_group_id = "${aws_security_group.bastion.id}"
+    cidr_blocks = ["0.0.0.0/0"]
+}
+
+
+
+resource "aws_security_group_rule" "bastion_to_nodes_ssh" {
+    type = "egress"
+    from_port = 22
+    to_port = 22
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.bastion.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+
+resource "aws_security_group_rule" "bastion_to_consul_cluster_tcp" {
+    type = "egress"
+    from_port = 8300
+    to_port = 8302
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.bastion.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+
+resource "aws_security_group_rule" "bastion_to_consul_cluster_udp" {
+    type = "egress"
+    from_port = 8300
+    to_port = 8302
+    protocol = "udp"
+    security_group_id = "${aws_security_group.bastion.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+
+resource "aws_security_group_rule" "bastion_to_consul_agent" {
+    type = "egress"
+    from_port = 8500
+    to_port = 8500
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.bastion.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+
+resource "aws_security_group_rule" "bastion_to_consul_dns_tcp" {
+    type = "egress"
+    from_port = 8600
+    to_port = 8600
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.bastion.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+
+resource "aws_security_group_rule" "bastion_to_consul_dns_udp" {
+    type = "egress"
+    from_port = 8600
+    to_port = 8600
+    protocol = "udp"
+    security_group_id = "${aws_security_group.bastion.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+
+resource "aws_security_group_rule" "bastion_to_swarm_manager" {
+    type = "egress"
+    from_port = 4000
+    to_port = 4000
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.bastion.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+
+resource "aws_security_group_rule" "bastion_to_docker_registry" {
+    type = "egress"
+    from_port = 5000
+    to_port = 5000
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.bastion.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
 
 resource "aws_instance" "bastion" {
-    ami = "${lookup(var.aws_bastion_ami, var.aws_region)}"
+    ami = "${var.aws_bastion_ami}"
     availability_zone = "${var.aws_region}${var.zone_1}"
-    instance_type = "t2.micro"
+    instance_type = "t2.small"
     key_name = "${var.stack_name}-keypair"
-    security_groups = ["${aws_security_group.bastion.id}"]
+    security_groups = ["${aws_security_group.bastion.id}","${aws_security_group.public.id}"]
     subnet_id = "${aws_subnet.region-public-a.id}"
+    user_data = <<EOF
+#cloud-config
+write_files:
+  - path: "/etc/stack.conf"
+    permissions: "0644"
+    owner: "root"
+    content: |
+      STACK_NAME="${var.stack_name}"
+      ADMIN_NETWORK="${lookup(var.cidr_prefix, var.aws_region)}.0.0/16"
+EOF
 
     tags  {
         Name = "${var.stack_name}-bastion-a"
@@ -278,112 +396,199 @@ resource "aws_security_group" "nodes" {
     name = "nodes"
     description = "Allow SSH traffic from the Bastion"
 
-    ingress {
-        from_port = 22
-        to_port = 22
-        protocol = "tcp"
-        security_groups = ["${aws_security_group.bastion.id}"]
-    }
-
-    #consul tcp
-    ingress {
-        from_port = 8300
-        to_port = 8300
-        protocol = "tcp"
-        self = true
-    }
-    ingress {
-        from_port = 8301
-        to_port = 8301
-        protocol = "tcp"
-        self = true
-    }
-    ingress {
-        from_port = 8302
-        to_port = 8302
-        protocol = "tcp"
-        self = true
-    }
-    #consul udp
-    ingress {
-        from_port = 8300
-        to_port = 8300
-        protocol = "udp"
-        self = true
-    }
-    ingress {
-        from_port = 8301
-        to_port = 8301
-        protocol = "udp"
-        self = true
-    }
-    ingress {
-        from_port = 8302
-        to_port = 8302
-        protocol = "udp"
-        self = true
-    }
-    #docker
-    ingress {
-        from_port = 2375
-        to_port = 2376
-        protocol = "tcp"
-        self = true
-    }
-    #docker swarm
-    ingress {
-        from_port = 4000
-        to_port = 4000
-        protocol = "tcp"
-        self = true
-    }
-
-    #docker overlay networking
-    ingress {
-        from_port = 7946
-        to_port = 7946
-        protocol = "tcp"
-        self = true
-    }
-    ingress {
-        from_port = 7946
-        to_port = 7946
-        protocol = "udp"
-        self = true
-    }
-    ingress {
-        from_port = 4789
-        to_port = 4789
-        protocol = "udp"
-        self = true
-    }
-
-
-    #docker registry
-    ingress {
-        from_port = 5000
-        to_port = 5000
-        protocol = "tcp"
-        self = true
-    }
-
-    egress {
-        from_port = 0
-        to_port = 0
-        protocol = "-1"
-        cidr_blocks = ["0.0.0.0/0"]
-    }
 
     vpc_id = "${aws_vpc.default.id}"
     tags {
        Name = "${var.stack_name}"
     }
-
-
-   lifecycle {
-      create_before_destroy = true
-   }
 }
+
+resource "aws_security_group_rule" "nodes_from_bastion_ssh" {
+    type = "ingress"
+    from_port = 22
+    to_port = 22
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.bastion.id}"
+}
+resource "aws_security_group_rule" "nodes_from_bastion_swarm" {
+    type = "ingress"
+    from_port = 4000
+    to_port = 4000
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.bastion.id}"
+}
+resource "aws_security_group_rule" "nodes_from_bastion_docker_registry" {
+    type = "ingress"
+    from_port = 5000
+    to_port = 5000
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.bastion.id}"
+}
+
+resource "aws_security_group_rule" "nodes_from_bastion_consul_agent" {
+    type = "ingress"
+    from_port = 8500
+    to_port = 8500
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.bastion.id}"
+}
+resource "aws_security_group_rule" "nodes_from_bastion_consul_dns_tcp" {
+    type = "ingress"
+    from_port = 8600
+    to_port = 8600
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.bastion.id}"
+}
+resource "aws_security_group_rule" "nodes_from_bastion_consul_dns_udp" {
+    type = "ingress"
+    from_port = 8600
+    to_port = 8600
+    protocol = "udp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.bastion.id}"
+}
+resource "aws_security_group_rule" "nodes_from_bastion_consul_cluster_tcp" {
+    type = "ingress"
+    from_port = 8300
+    to_port = 8302
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.bastion.id}"
+}
+resource "aws_security_group_rule" "nodes_from_bastion_consul_cluster_udp" {
+    type = "ingress"
+    from_port = 8300
+    to_port = 8302
+    protocol = "udp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.bastion.id}"
+}
+resource "aws_security_group_rule" "nodes_from_public_tcp" {
+    type = "ingress"
+    from_port = 32768
+    to_port = 60999
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.public.id}"
+}
+resource "aws_security_group_rule" "nodes_from_public_udp" {
+    type = "ingress"
+    from_port = 32768
+    to_port = 60999
+    protocol = "udp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.public.id}"
+}
+resource "aws_security_group_rule" "nodes_from_node_consul_cluster_tcp" {
+    type = "ingress"
+    from_port = 8300
+    to_port = 8302
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "nodes_from_node_consul_cluster_udp" {
+    type = "ingress"
+    from_port = 8300
+    to_port = 8302
+    protocol = "udp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "nodes_from_node_consul_agent" {
+    type = "ingress"
+    from_port = 8500
+    to_port = 8500
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "nodes_from_node_consul_dns_tcp" {
+    type = "ingress"
+    from_port = 8600
+    to_port = 8600
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "nodes_from_node_consul_dns_udp" {
+    type = "ingress"
+    from_port = 8600
+    to_port = 8600
+    protocol = "udp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "nodes_from_node_docker" {
+    type = "ingress"
+    from_port = 2375
+    to_port = 2376
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "nodes_from_node_swarm" {
+    type = "ingress"
+    from_port = 4000
+    to_port = 4000
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "nodes_from_node_docker_network_tcp" {
+    type = "ingress"
+    from_port = 7946
+    to_port = 7946
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "nodes_from_node_docker_network_udp" {
+    type = "ingress"
+    from_port = 7946
+    to_port = 7946
+    protocol = "udp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "nodes_from_node_docker_network2_udp" {
+    type = "ingress"
+    from_port = 4789
+    to_port = 4789
+    protocol = "udp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "nodes_from_node_docker_registry" {
+    type = "ingress"
+    from_port = 5000
+    to_port = 5000
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "nodes_to_all_tcp" {
+    type = "egress"
+    from_port = 0
+    to_port = 65535
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    cidr_blocks = ["0.0.0.0/0"]
+}
+resource "aws_security_group_rule" "nodes_to_all_udp" {
+    type = "egress"
+    from_port = 0
+    to_port = 65535
+    protocol = "udp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    cidr_blocks = ["0.0.0.0/0"]
+}
+
 resource "aws_route53_record" "bastion_dns_records" {
     zone_id = "${aws_route53_zone.zone.zone_id}"
     name = "bastion.${var.stack_name}"
