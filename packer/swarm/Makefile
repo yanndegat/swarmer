@@ -1,6 +1,6 @@
 .PHONY: all dev aws gen-key-pair
 
-CONSUL_AMI_ID ?= "ami-81aa1af2"
+CONSUL_AMI_ID ?= "ami-0438bb77"
 OVF_SOURCE_PATH ?= "../consul/builds/consul/consul-packer.ovf"
 
 all: dev

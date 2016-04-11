@@ -79,7 +79,7 @@
   ],
   "variables": {
     "aws-region": "eu-west-1",
-    "aws-source-ami":"ami-81aa1af2",
+    "aws-source-ami":"ami-0438bb77",
     "ovf-source-path": ""
   }
 }
