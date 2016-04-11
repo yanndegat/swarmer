@@ -2,7 +2,7 @@
 #+OPTIONS: toc:3
 #+SETUPFILE: theme.setup
  
-Note: you should prefer reading the [[file:/README.html]] file in your browser. 
+Note: you should prefer reading the [[file:README.html]] file in your browser. 
 
 * Description
 
@@ -631,7 +631,7 @@ Now we can play with swarm.
 
 ** Configure DNS resolution
 
-To resolv names, you have to configure a dns service that will forward the requests to consul. A docker-compose file is provided ([[file:/dns-proxy-compose.yml]]).
+To resolv names, you have to configure a dns service that will forward the requests to consul. A docker-compose file is provided ([[file:dns-proxy-compose.yml]]).
 
 This compose file starts a dnsmasq service with net=host that will target $CONSULIP consul agent. This only works with vagrant or when the VPN is setup.
 
@@ -644,6 +644,7 @@ $ # eventually run the following command for your next boot
 $ sudo su
 root $ echo "nameserver 127.0.0.1" > /etc/resolv.conf.head
 root $ exit
+$ export CONSULIP=192.168.101.101
 $ docker-compose -d -f dns-proxy-compose.yml up -d
 $ curl registry.service.consul:5000/v2/_catalog
 {"repositories":[]}
