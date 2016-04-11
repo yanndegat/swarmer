@@ -8,16 +8,15 @@ CONTAINER_NAME=${CONTAINER_NAME:-"registry"}
 ADMIN_NETWORK=${ADMIN_NETWORK:-"default"}
 HOST_IP="$(ip route | grep $ADMIN_NETWORK | sed 's/.*src \([0-9\.]*\).*$/\1/g')"
 
-#targets swarm
-export DOCKER_HOST=$HOST_IP:4000
+SWARM_HOST=$HOST_IP:4000
 
 registry-exists(){
-    ID=$(docker ps -q -a --filter label=private-registry)
+    ID=$(docker -H $1 ps -q -a --filter label=private-registry)
     [[ $? -eq 0 ]] && [[ ! -z $ID ]]
 }
 
 registry-running(){
-    ID=$(docker ps -q --filter label=private-registry)
+    ID=$(docker -H $1 ps -q --filter label=private-registry)
     [[ $? -eq 0 ]] && [[ ! -z $ID ]]
 }
 
@@ -34,17 +33,17 @@ exit_release(){
 }
 
 if [[ "$LOCKED" != "true" ]]; then
-    echo $LOCKED
-    echo "start-registry-lock already acquired".
+    logger -s -p user.info $LOCKED
+    logger -s -p user.info "start-registry-lock already acquired".
     exit_release 0
 fi
 
-if ! registry-exists ; then
+
+if ! registry-exists $SWARM_HOST ; then
     docker create \
            -l private-registry \
-           --net host \
            --name $CONTAINER_NAME \
-           -p 5000 \
+           -p 5000:5000 \
            -e reschedule:on-node-failure \
            -e SERVICE_5000_CHECK_HTTP=/ \
            -e SERVICE_5000_CHECK_INTERVAL=15s \
@@ -53,8 +52,12 @@ if ! registry-exists ; then
            registry:2 >&2 || exit_release 1
 fi
 
-if ! registry-running ; then
-    sudo docker start $CONTAINER_NAME >&2 || exit_release 1
+if registry-exists $HOST_IP:2375; then
+    if ! registry-running $HOST_IP:2375; then
+        sudo docker start -a $CONTAINER_NAME >&2 || exit_release 1
+    fi
+else
+    logger -s -p user.info "registry exists on another host. leaving." >&2
 fi
 
 exit_release 0

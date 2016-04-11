@@ -7,5 +7,6 @@ Requires=swarm.service consul.service
 Restart=always
 RestartSec=10s
 ExecStart=/opt/scripts/registry/start-registry
+ExecStop=/usr/bin/docker stop registry
 [Install]
 WantedBy=default.target
