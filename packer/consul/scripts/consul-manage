@@ -5,7 +5,7 @@ CONSUL_CLUSTER_SIZE=3
 CONSUL_MODE="server"
 CONSUL_SERVER_OPTS="-server -bootstrap-expect $CONSUL_CLUSTER_SIZE"
 CONSUL_DATADIR="/var/lib/consul"
-CONSUL_OPTS="-data-dir $CONSUL_DATADIR"
+CONSUL_OPTS="-data-dir $CONSUL_DATADIR -domain swarmer"
 ADMIN_NETWORK="default"
 CONSUL_BIN=$(readlink -f $(dirname $0))/consul
 

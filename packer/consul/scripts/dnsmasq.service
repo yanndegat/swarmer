@@ -15,7 +15,7 @@ ExecStart=/bin/sh -c '/usr/bin/docker run --rm \
   --net=host \
   --cap-add=NET_ADMIN \
   --env SERVICE_IGNORE=true \
-  andyshinn/dnsmasq -S /consul/${COREOS_PRIVATE_IPV4}#8600'
+  andyshinn/dnsmasq -S /swarmer/${COREOS_PRIVATE_IPV4}#8600'
 ExecStartPost=/bin/sh -c '\
   echo -e "[Resolve]\nDNS=${COREOS_PRIVATE_IPV4}" > /etc/systemd/resolved.conf.d/00-consul-dns.conf && \
   systemctl restart systemd-resolved;'

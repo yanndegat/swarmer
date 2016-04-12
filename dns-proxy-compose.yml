@@ -2,7 +2,7 @@ version: '2'
 services:
   dnsmasq:
     image: andyshinn/dnsmasq
-    command: -S /consul/${CONSULIP}#8600
+    command: -S /swarmer/${CONSULIP}#8600
     network_mode: host
     cap_add:
       - NET_ADMIN

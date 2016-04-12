@@ -16,7 +16,7 @@ sudo chmod +x /opt/scripts/registry/start-registry
 sudo mv /tmp/registry.service /etc/systemd/system
 sudo systemctl enable registry.service
 cat > /tmp/private-registry.conf <<EOF
-DOCKER_OPTS="--insecure-registry=registry.service.consul:5000"
+DOCKER_OPTS="--insecure-registry=registry.service.swarmer:5000"
 EOF
 sudo cp /tmp/private-registry.conf /etc/docker.conf.d/
 
