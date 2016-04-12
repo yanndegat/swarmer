@@ -2,6 +2,9 @@
 
 sudo mkdir -p /opt/scripts/{swarm,registrator,registry}
 
+sudo mkdir -p /etc/docker/registry
+sudo wget -o /etc/docker/registry/config.yml https://raw.githubusercontent.com/docker/distribution/master/cmd/registry/config-example.yml
+
 #swarm
 /usr/bin/docker pull swarm:1.1.3
 sudo mv /tmp/swarm-manage /opt/scripts/swarm/swarm-manage

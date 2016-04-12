@@ -33,6 +33,50 @@ resource "aws_iam_group_policy" "swarmer_policy" {
 EOF
 }
 
+resource "aws_iam_access_key" "registry" {
+    user = "${aws_iam_user.registry.name}"
+}
+
+resource "aws_iam_user" "registry" {
+    name = "docker_registry"
+    path = "/${var.stack_name}/users/"
+}
+
+resource "aws_iam_user_policy" "registry" {
+    name = "docker_registry"
+    user = "${aws_iam_user.registry.name}"
+    policy = <<EOF
+{
+  "Version": "2012-10-17",
+
+ "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "s3:ListAllMyBuckets",
+            "Resource": "arn:aws:s3:::*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": "arn:aws:s3:::${var.bucket}"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:DeleteObject"
+            ],
+            "Resource": "arn:aws:s3:::${var.bucket}/*"
+        }
+    ]
+}
+EOF
+}
+
 resource "aws_iam_group_membership" "team_swarmer" {
     name = "tf-testing-group-membership"
     users = [

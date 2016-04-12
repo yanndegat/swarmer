@@ -38,6 +38,7 @@ bootstrap(){
     #make swarm cluster
     cat >> $TF_VARFILE <<EOF
 aws_bastion_ami = "${BASTION_VPN_AMI}"
+bucket = "${BUCKET_NAME}"
 EOF
 
    # make vpc

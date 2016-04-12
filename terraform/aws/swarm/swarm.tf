@@ -24,6 +24,36 @@ write_files:
     content: |
       export SWARM_MODE="${var.swarm_mode}"
       export ADMIN_NETWORK="${var.admin_network}"
+  - path: "/etc/docker/registry/config.yml"
+    permissions: "0644"
+    owner: "root"
+    content: |
+      version: 0.1
+      log:
+        fields:
+          service: registry
+      storage:
+        s3:
+          accesskey: ${var.registry_access_key_id}
+          secretkey: ${var.registry_access_key_secret}
+          region: ${var.aws_region}
+          bucket: ${var.bucket}
+          encrypt: true
+          secure: true
+          v4auth: true
+          chunksize: 5242880
+          rootdirectory: /docker-registry
+        cache:
+          blobdescriptor: inmemory
+      http:
+        addr: :5000
+        headers:
+          X-Content-Type-Options: [nosniff]
+      health:
+        storagedriver:
+          enabled: true
+          interval: 10s
+          threshold: 3
   - path: "/etc/registrator/registrator.conf"
     permissions: "0644"
     owner: "root"
@@ -83,6 +113,36 @@ write_files:
     content: |
       export SWARM_MODE="${var.swarm_mode}"
       export ADMIN_NETWORK="${var.admin_network}"
+  - path: "/etc/docker/registry/config.yml"
+    permissions: "0644"
+    owner: "root"
+    content: |
+      version: 0.1
+      log:
+        fields:
+          service: registry
+      storage:
+        s3:
+          accesskey: ${var.registry_access_key_id}
+          secretkey: ${var.registry_access_key_secret}
+          region: ${var.aws_region}
+          bucket: ${var.bucket}
+          encrypt: true
+          secure: true
+          v4auth: true
+          chunksize: 5242880
+          rootdirectory: /docker-registry
+        cache:
+          blobdescriptor: inmemory
+      http:
+        addr: :5000
+        headers:
+          X-Content-Type-Options: [nosniff]
+      health:
+        storagedriver:
+          enabled: true
+          interval: 10s
+          threshold: 3
   - path: "/etc/registrator/registrator.conf"
     permissions: "0644"
     owner: "root"

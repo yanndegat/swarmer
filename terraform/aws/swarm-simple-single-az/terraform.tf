@@ -16,6 +16,10 @@ module "swarm-cluster-single-zone" {
      consul_joinaddress = "${var.consul_joinaddress}"
      consul_mode = "server"
      admin_network = "${var.admin_network}"
+     registry_access_key_id = "${var.registry_access_key_id}"
+     registry_access_key_secret = "${var.registry_access_key_secret}"
+     bucket = "${var.bucket}"
+     aws_region= "${var.aws_region}"
 }
 
 module "swarm-cluster-single-zone-nodes" {
@@ -36,4 +40,8 @@ module "swarm-cluster-single-zone-nodes" {
      consul_joinaddress = "${module.swarm-cluster-single-zone.join_address}"
      consul_mode = "agent"
      admin_network = "${var.admin_network}"
+     registry_access_key_id = "${var.registry_access_key_id}"
+     registry_access_key_secret = "${var.registry_access_key_secret}"
+     bucket = "${var.bucket}"
+     aws_region= "${var.aws_region}"
 }

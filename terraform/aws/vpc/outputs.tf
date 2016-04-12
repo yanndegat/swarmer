@@ -1,3 +1,9 @@
+output "registry_access_key_id" {
+  value = "${aws_iam_access_key.registry.id}"
+}
+output "registry_access_key_secret" {
+  value = "${aws_iam_access_key.registry.secret}"
+}
 output "swarmer_access_key_id" {
   value = "${aws_iam_access_key.swarmer_ak.id}"
 }

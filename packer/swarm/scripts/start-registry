@@ -48,7 +48,7 @@ if ! registry-exists $SWARM_HOST ; then
            -e SERVICE_5000_CHECK_HTTP=/ \
            -e SERVICE_5000_CHECK_INTERVAL=15s \
            -e SERVICE_5000_CHECK_TIMEOUT=1s \
-           --env-file=/etc/registry.conf \
+           -v /etc/docker/registry/config.yml:/etc/docker/registry/config.yml \
            registry:2 >&2 || exit_release 1
 fi
 

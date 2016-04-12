@@ -98,6 +98,8 @@ bootstrap(){
 additional_nodes = "$ADDITIONAL_NODES"
 name = "swarm"
 stack_name = "${STACK_NAME}"
+bucket = "${BUCKET_NAME}"
+aws_region = "${AWS_DEFAULT_REGION}"
 EOF
 
     $TFCMD -c swarm-simple-multi-az -i swarm-multiaz -f $TF_VARFILE apply
@@ -133,6 +135,10 @@ subnet_id =  ""
 instance_type = ""
 node_datasize = "0"
 node_ebs_optimized = ""
+registry_access_key_id = ""
+registry_access_key_secret = ""
+bucket = ""
+aws_region = ""
 EOF
 
     # destroy vpc

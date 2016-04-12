@@ -22,3 +22,8 @@ variable "cidr_prefix" {
         eu-west-1 = "10.233"
     }
 }
+
+variable "bucket" {
+    default = ""
+    description = "s3 bucket for the registry"
+}

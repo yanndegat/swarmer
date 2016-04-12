@@ -1,3 +1,6 @@
+variable "aws_region" {
+    default = "eu-west-1"
+}
 variable "swarm_ami" {
     description = "AWS AMI Id, if you change, make sure it is compatible with instance type, not all AMIs allow all instance types "
 }
@@ -75,4 +78,19 @@ variable "node_ebs_optimized"{
 variable "stack_name" {
     default = "swarm"
     description = "Name tag for the servers"
+}
+
+variable "registry_access_key_id" {
+    default = ""
+    description = "aws access key for the registry"
+}
+
+variable "registry_access_key_secret" {
+    default = ""
+    description = "aws access key for the registry"
+}
+
+variable "bucket" {
+    default = ""
+    description = "s3 bucket for the registry"
 }
