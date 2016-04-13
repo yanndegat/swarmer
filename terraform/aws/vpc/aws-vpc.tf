@@ -528,6 +528,22 @@ resource "aws_security_group_rule" "nodes_from_public_udp" {
     security_group_id = "${aws_security_group.nodes.id}"
     source_security_group_id = "${aws_security_group.public.id}"
 }
+resource "aws_security_group_rule" "nodes_from_nodes_tcp" {
+    type = "ingress"
+    from_port = 32768
+    to_port = 60999
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "nodes_from_nodes_udp" {
+    type = "ingress"
+    from_port = 32768
+    to_port = 60999
+    protocol = "udp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
 resource "aws_security_group_rule" "nodes_from_node_consul_cluster_tcp" {
     type = "ingress"
     from_port = 8300
