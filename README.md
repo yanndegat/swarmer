@@ -67,7 +67,7 @@
 </div>
 </div>
 
-Note: you should prefer reading the <README.html> file in your browser. 
+Note: you may prefer reading the [README.html](README.html) file in your browser. 
 
 # Description<a id="orgheadline1"></a>
 
