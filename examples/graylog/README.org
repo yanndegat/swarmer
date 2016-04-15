@@ -1,0 +1,89 @@
+#+TITLE: Graylog Setup Example
+#+OPTIONS: toc:3
+#+SETUPFILE: ../../theme.setup
+
+Note: you may prefer reading the [[file:README.html][README.html]] file in your browser.
+
+* Description
+
+This is a complex docker-compose project that bootstraps an HA deployment of graylog with :
+
+- a 3 node elasticsearch cluster
+- a 3 node mongodb replicaset
+- a scalable graylog-server
+- a graylog-web frontend
+
+Custom docker images are provided and you will learn how to push images on swarmer.
+
+
+* Pre-requisites
+
+- a swarmer cluster ( vagrant or aws with a vpn connection ) running
+- a dns proxy running
+
+* Build & Push the images
+
+Go in each [[file:docker-images][docker-images]] sub directory and run
+
+#+BEGIN_SRC bash
+$ DOCKER_HOST= make latest
+docker build --pull=true -t registry.service.swarmer:5000/graylog-server:2016-04-13-144634 .
+Sending build context to Docker daemon 70.24 MB
+Step 1 : FROM java:8-alpine
+8-alpine: Pulling from library/java
+420890c9e918: Already exists
+...
+Successfully built 04ced9d5f8f6
+echo 2016-04-13-144634 > .last_tag
+test -s .last_tag || (echo You need to build first ; exit 1)
+docker tag -f registry.service.swarmer:5000/graylog-server:`cat .last_tag` registry.service.swarmer:5000/graylog-server:latest
+
+$ DOKCER_HOST= make push-latest
+docker push registry.service.swarmer:5000/graylog-server:latest
+The push refers to a repository [registry.service.swarmer:5000/graylog-server]
+...
+$ export DOCKER_HOST=swarmer-4000.service.swarmer:4000
+$ docker pull registry.service.swarmer:5000/graylog-server
+node1: Pulling registry.service.swarmer:5000/graylog-server:latest... : downloaded
+node2: Pulling registry.service.swarmer:5000/graylog-server:latest... : downloaded
+node3: Pulling registry.service.swarmer:5000/graylog-server:latest... : downloaded
+$ 
+#+END_SRC
+
+* Run graylog
+
+Things should now be as simple as a single docker-compose up
+As you're targeting a swarm cluster, don't forget to set your DOCKER_HOST env var.
+
+#+BEGIN_SRC bash
+$ export DOCKER_HOST=swarm-4000.service.consul:4000
+$ docker-compose up -d
+Starting graylog_mongo-1_1
+Starting graylog_es-node-0_1
+Starting graylog_mongo-0_1
+Starting graylog_mongo-2_1
+Starting graylog_replica-set-config_1
+Starting graylog_es-node-1_1
+Starting es-master
+Starting graylog_graylog-server_1
+Starting graylog_graylog-web_1
+$ 
+#+END_SRC
+
+* Access Graylog
+
+#+BEGIN_SRC bash
+$ firefox graylog-web.service.swarmer:$(curl consul.service.swarmer:8500/v1/catalog/service/graylog-web | jq '.[].ServicePort')
+#+END_SRC
+
+* Scale Graylog
+
+Thanks to the magic of consul-template, you can easily scale graylog server services with simple docker-compose commands:
+
+#+BEGIN_SRC bash
+$ export DOCKER_HOST=swarm-4000.service.consul:4000
+$ docker-compose scale graylog-server=3
+Creating and starting 2 ... done
+Creating and starting 3 ... done
+$ 
+#+END_SRC

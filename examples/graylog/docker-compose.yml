@@ -1,0 +1,145 @@
+version: '2'
+
+services:
+# ELASTICSEARCH
+  es-master:
+    image: elasticsearch:1
+    command: elasticsearch -Des.node.name="es-master" -Des.cluster.name="graylog2"
+    container_name: es-master
+    restart: always
+    environment:
+      - affinity:container!=*graylog*es-*
+    networks:
+        - graylog-tier
+
+  es-node-0:
+    image: elasticsearch:1
+    command: elasticsearch -Des.node.name="es-node-0" -Des.cluster.name="graylog2"
+    restart: always
+    command: elasticsearch --discovery.zen.ping.unicast.hosts=es-master
+    environment:
+      - affinity:container!=*graylog*es-*
+    networks:
+      - graylog-tier
+
+  es-node-1:
+    image: elasticsearch:1
+    command: elasticsearch -Des.node.name="es-node-1" -Des.cluster.name="graylog2"
+    restart: always
+    command: elasticsearch --discovery.zen.ping.unicast.hosts=es-master
+    environment:
+      - affinity:container!=*graylog*es-*
+    networks:
+      - graylog-tier
+
+# MONGODB
+  mongo-0:
+    image: mongo:3
+    command: mongod --smallfiles --replSet graylog
+    environment:
+      - affinity:container!=*graylog*mongo-*
+    expose:
+      - 27017
+    networks:
+      - graylog-tier
+  mongo-1:
+    image: mongo:3
+    command: mongod --smallfiles --replSet graylog
+    environment:
+      - affinity:container!=*graylog*mongo-*
+    expose:
+      - 27017
+    networks:
+      - graylog-tier
+  mongo-2:
+    image: mongo:3
+    command: mongod --smallfiles --replSet graylog
+    environment:
+      - affinity:container!=*graylog*mongo-*
+    expose:
+      - 27017
+    networks:
+      - graylog-tier
+  replica-set-config:
+    image: registry.service.swarmer:5000/mongo-replicasetup
+    restart: 'no'
+    depends_on:
+      - mongo-0
+      - mongo-1
+      - mongo-2
+    network_mode: "service:mongo-0"
+    command: graylog mongo-0 mongo-1 mongo-2
+
+    # GRAYLOG
+  graylog-server:
+    image: registry.service.swarmer:5000/graylog-server
+    expose:
+      - 12900
+    ports:
+      - 9000
+      - 12900
+      - 12201/udp
+    depends_on:
+      - mongo-0
+      - mongo-1
+      - mongo-2
+      - es-master
+      - es-node-0
+      - es-node-1
+      - replica-set-config
+    environment:
+      - affinity:container!=*graylog*server*
+      - ES_HOSTS=es-master:9300,es-node-0:9300,es-node-1:9300
+      - MONGO_HOSTS=mongo-0:27017,mongo-1:27017,mongo-2:27017
+      - MONGO_RSET=graylog
+      - BIND_ADDRESS=0.0.0.0
+      - ADMIN_NETWORK=172.100.1.0/24
+      - ADMIN_PASSWORD_SHA256=88630b1fa7cfa07914190f15cfa7a92bdca8c459ad33c102ed8edf2e34d74a98
+      - PASSWORD_SECRET=DT4uXamw8bJYBux7F9CkCX0T1HHrUktry2o2LsRJTPGcCwX2h5Xkzk8nJISLkCOzKWNCa0GMaqWhFntX5br50oZrVkBPHkjh
+    networks:
+      - graylog-tier
+
+  graylog-web:
+    image: registry.service.swarmer:5000/graylog-web
+    ports:
+      - 9000
+    depends_on:
+      - rest-lb
+    environment:
+      - CONSUL_HOST=consul.service.swarmer:8500
+      - GRAYLOG_SERVICE_NAME=graylog-server-12900
+      - APPLICATION_SECRET=DT4uXamw8bJYBux7F9CkCX0T1HHrUktry2o2LsRJTPGcCwX2h5Xkzk8nJISLkCOzKWNCa0GMaqWhFntX5br50oZrVkBPHkjh
+    networks:
+      - graylog-tier
+
+    #Load balancers for graylog REST and GELF endpoints
+  rest-lb:
+    image: registry.service.swarmer:5000/haproxy-consul
+    ports:
+      - 12900
+    depends_on:
+      - graylog-server
+    environment:
+      - SERVICE_NAME=graylog-server
+    command: 12900 consul.service.swarmer:8500 graylog-server-12900
+    networks:
+      - graylog-tier
+
+  input-gelf-lb:
+    image: registry.service.swarmer:5000/haproxy-consul
+    ports:
+      - 12901
+    environment:
+      - SERVICE_NAME=graylog-gelf
+    depends_on:
+      - graylog-server
+    command: 12901 consul.service.swarmer:8500 graylog-server-12901
+    networks:
+      - graylog-tier
+
+networks:
+  graylog-tier:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.100.1.0/24
