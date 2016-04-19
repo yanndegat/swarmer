@@ -1,0 +1,766 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2016-04-25 lun. 11:41 -->
+<meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta  name="viewport" content="width=device-width, initial-scale=1" />
+<title>Swarmer: Deploy on AWS</title>
+<meta  name="generator" content="Org-mode" />
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  pre.src-sh:before    { content: 'sh'; }
+  pre.src-bash:before  { content: 'sh'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-R:before     { content: 'R'; }
+  pre.src-perl:before  { content: 'Perl'; }
+  pre.src-java:before  { content: 'Java'; }
+  pre.src-sql:before   { content: 'SQL'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  /*]]>*/-->
+</style>
+<link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
+<link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/readtheorg.css"/>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="http://www.pirilampo.org/styles/lib/js/jquery.stickytableheaders.js"></script>
+<script type="text/javascript" src="http://www.pirilampo.org/styles/readtheorg/js/readtheorg.js"></script>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2013 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">Swarmer: Deploy on AWS</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#orgheadline1">1. Description</a></li>
+<li><a href="#orgheadline6">2. Pre-Requisites</a>
+<ul>
+<li><a href="#orgheadline4">2.1. With docker [Recommanded]</a>
+<ul>
+<li><a href="#orgheadline2">2.1.1. Use the image</a></li>
+<li><a href="#orgheadline3">2.1.2. Build the image</a></li>
+</ul>
+</li>
+<li><a href="#orgheadline5">2.2. Without docker</a></li>
+</ul>
+</li>
+<li><a href="#orgheadline17">3. Getting Started</a>
+<ul>
+<li><a href="#orgheadline7">3.1. Init S3, Keypair and AMIs</a></li>
+<li><a href="#orgheadline8">3.2. Create the VPC</a></li>
+<li><a href="#orgheadline9">3.3. Create the Swarm!</a></li>
+<li><a href="#orgheadline14">3.4. Configure your access to your swarm cluster</a>
+<ul>
+<li><a href="#orgheadline10">3.4.1. SSH tunnels</a></li>
+<li><a href="#orgheadline11">3.4.2. VPN access</a></li>
+<li><a href="#orgheadline12">3.4.3. SSH to a node</a></li>
+<li><a href="#orgheadline13">3.4.4. Create an ssh tunnel to swarm</a></li>
+</ul>
+</li>
+<li><a href="#orgheadline15">3.5. Destroy the cluster and the vpc</a></li>
+<li><a href="#orgheadline16">3.6. Debugging</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p>
+Note: you may prefer reading the <a href="README.html">README.html</a> file in your browser. 
+</p>
+
+<div id="outline-container-orgheadline1" class="outline-2">
+<h2 id="orgheadline1"><span class="section-number-2">1</span> Description</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+This guide will help you deploy swarm on Amazon AWS.
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline6" class="outline-2">
+<h2 id="orgheadline6"><span class="section-number-2">2</span> Pre-Requisites</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+To use this project you will need at least this list of tools properly installed on your box:
+</p>
+
+<ul class="org-ul">
+<li>docker 1.10</li>
+<li>gnu make 4.1</li>
+<li>vagrant 1.8</li>
+<li>virtualbox 5.0</li>
+</ul>
+</div>
+
+
+<div id="outline-container-orgheadline4" class="outline-3">
+<h3 id="orgheadline4"><span class="section-number-3">2.1</span> With docker [Recommanded]</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+You can then use the provided docker <a href="Dockerfile">container</a> to avoid installing the entire toolbox on your computer by either using the image available on the docker hub or by building it yourself.
+</p>
+</div>
+
+
+<div id="outline-container-orgheadline2" class="outline-4">
+<h4 id="orgheadline2"><span class="section-number-4">2.1.1</span> Use the image</h4>
+<div class="outline-text-4" id="text-2-1-1">
+<div class="org-src-container">
+
+<pre class="src src-bash" id="orgsrcblock1">$ docker run --rm -it yanndegat/swarmer
+bash-4.3# ...
+</pre>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline3" class="outline-4">
+<h4 id="orgheadline3"><span class="section-number-4">2.1.2</span> Build the image</h4>
+<div class="outline-text-4" id="text-2-1-2">
+<div class="org-src-container">
+
+<pre class="src src-bash" id="orgsrcblock2">$ make latest
+$ docker run --rm -it swarmer
+bash-4.3# ...
+</pre>
+</div>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline5" class="outline-3">
+<h3 id="orgheadline5"><span class="section-number-3">2.2</span> Without docker</h3>
+<div class="outline-text-3" id="text-2-2">
+<p>
+If you chose not to use the docker image, you will have to install those additional tools :
+</p>
+
+<ul class="org-ul">
+<li>terraform 0.6.14</li>
+<li>packer 0.10.0</li>
+<li>python 2.7</li>
+<li>awscli (pip install awscli)</li>
+<li>gnupg 2.1</li>
+<li>jq 1.5</li>
+<li>curl</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline17" class="outline-2">
+<h2 id="orgheadline17"><span class="section-number-2">3</span> Getting Started</h2>
+<div class="outline-text-2" id="text-3">
+<p>
+Things should be a "little bit harder" than a single vagrant up ;)
+Before booting the instances, we will have to create an ssh keypair and then install a brand new multi-az VPC, with its nat gateways and public and private subnets. We will also add a bastion+vpn instance to ease interactions with the services deployed within your VPC.
+</p>
+
+<p>
+Then we can boot the Swarmer instances on the proper subnets.
+</p>
+
+<p>
+We provide scripts to allow different kind of setups. Feel free to customize them to better suit your needs.
+</p>
+
+<p>
+IMPORTANT: All of these actions will be performed by terraform. As your setup on AWS could be more than just a "dev environment", terraform store the state of our infrastructure in S3, allowing multiple users to retrieve/update the infrastructure.
+</p>
+</div>
+
+
+<div id="outline-container-orgheadline7" class="outline-3">
+<h3 id="orgheadline7"><span class="section-number-3">3.1</span> Init S3, Keypair and AMIs</h3>
+<div class="outline-text-3" id="text-3-1">
+<p>
+A script is provided to initialize the creation of the required resources: 
+</p>
+
+<ul class="org-ul">
+<li>a s3 bucket</li>
+<li>a keypair</li>
+<li>the amis</li>
+</ul>
+
+<p>
+The keypair will be encrypted with gpg and uploaded to the s3 bucket, so that it can be shared with other members of a team.
+</p>
+
+<p>
+We will show an example using the docker swarmer image.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash">$ docker run --rm -it \ 
+  -v $(pwd):/tmp/output \
+  -e AWS_SECRET_ACCESS_KEY="[AWS_SECRET_ACCESS_KEY]" \
+  -e AWS_ACCESS_KEY_ID="[AWS_ACCESS_KEY_ID]" \
+  -e AWS_DEFAULT_REGION="[AWS_REGION]" \
+  -e STACK_NAME="myswarmer" \
+  -e AWS_ACCOUNT="[AWS_ACCOUNT]" \
+  -e PASSPHRASE="[a passphrase]"
+   swarmer terraform/aws/scripts/dc-init.sh -A init
+...
+1458667162,,ui,say,==&gt; aws: No volumes to clean up%!(PACKER_COMMA) skipping
+1458667162,,ui,say,==&gt; aws: Deleting temporary security group...
+1458667163,,ui,say,==&gt; aws: Deleting temporary keypair...
+1458667163,,ui,say,Build 'aws' finished.
+1458667163,,ui,say,\n==&gt; Builds finished. The artifacts of successful builds are:
+1458667163,aws,artifact-count,1
+1458667163,aws,artifact,0,builder-id,mitchellh.amazonebs
+1458667163,aws,artifact,0,id,eu-west-1:ami-c79e1ab4
+1458667163,aws,artifact,0,string,AMIs were created:\n\neu-west-1: ami-c79e1ab4
+1458667163,aws,artifact,0,files-count,0
+1458667163,aws,artifact,0,end
+1458667163,,ui,say,--&gt; aws: AMIs were created:\n\neu-west-1: ami-c79e1ab4
+make: Leaving directory '/src/packer/swarmer'
+</pre>
+</div>
+
+<p>
+IMPORTANT! As this step builds severals AMIs it can be pretty long. Coffee time.
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline8" class="outline-3">
+<h3 id="orgheadline8"><span class="section-number-3">3.2</span> Create the VPC</h3>
+<div class="outline-text-3" id="text-3-2">
+<p>
+A script is provided to create a VPC and all its associated resources.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash">$ docker run --rm -it \ 
+  -e AWS_SECRET_ACCESS_KEY="[AWS_SECRET_ACCESS_KEY]" \
+  -e AWS_ACCESS_KEY_ID="[AWS_ACCESS_KEY_ID]" \
+  -e AWS_DEFAULT_REGION="[AWS_REGION]" \
+  -e STACK_NAME="myswarmer" \
+  -e AWS_ACCOUNT="[AWS_ACCOUNT]" \
+   swarmer terraform/aws/scripts/dc-multi-az-vpc.sh bootstrap
+...
+
+Apply complete! Resources: 30 added, 0 changed, 0 destroyed.
+
+The state of your infrastructure has been saved to the path
+below. This state is required to modify and destroy your
+infrastructure, so keep it safe. To inspect the complete state
+use the `terraform show` command.
+
+State path: .terraform/terraform.tfstate
+
+Outputs:
+
+  availability_zones        = eu-west-1a,eu-west-1b
+  bastion_ip                = 53.40.250.156
+  dns_domain_name           = myswarmer
+  dns_zone_id               = Z31337FAKAECW63O
+  key_name                  = myswarmer-keypair
+  security_group            = sg-2c2d3048
+  subnet_id_zone_a          = subnet-3f0ff45b
+  subnet_id_zone_b          = subnet-ebfc1f9d
+  subnet_ids                = subnet-3f0ff45b,subnet-ebfc1f9d
+  swarmer_access_key_id     = FAKEI7WKFAKEIUIFAKE
+  swarmer_access_key_secret = +FAK+FAKEFAKES75Eb5FAKE5LSZFAKE5nq1ypOGFAKE
+  vpc_id                    = vpc-aa2e3ecf
+
+$ ...
+</pre>
+</div>
+
+<p>
+This step takes normally less than 5 minutes.
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline9" class="outline-3">
+<h3 id="orgheadline9"><span class="section-number-3">3.3</span> Create the Swarm!</h3>
+<div class="outline-text-3" id="text-3-3">
+<p>
+Now that you have a proper VPC bootstrapped, you can deploy your swarm instance into it. 
+</p>
+
+<p>
+You have several choices of deployment :
+</p>
+
+<ul class="org-ul">
+<li>separated consul servers from swarm nodes</li>
+<li>separated swarm managers from swarm nodes</li>
+<li>single/multi availability zones deployment</li>
+</ul>
+
+<p>
+It is commonly accepted that, for small clusters (up to 10 nodes), you can colocate your swarm managers with your swarm agents and have as many managers as agents.
+Yet, it is not recommanded to have a lot of consul servers. From 3 to 6 is a good choice for reliability. More and the gossip protocol and sync process will start downgrading performances.
+</p>
+
+<p>
+Here we will boot a 6 nodes swarm clusters spanned on 2 availability zones, with one consul server by swarm node. That way, if an avaibility zone goes down, consul still has 3 nodes to make a quorum for master election.
+</p>
+
+<p>
+Terraform is the tool used to bootstrap the instance. Also several building blocks are available to help you quickly bootstrap a cluster. Some example bash scripts demonstrate how to use those terraform building blocks. Feel free to add/create/modify them to get the infrastructure that better suits your requirements.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash">$ docker run --rm -it \ 
+  -e AWS_SECRET_ACCESS_KEY="[AWS_SECRET_ACCESS_KEY]" \
+  -e AWS_ACCESS_KEY_ID="[AWS_ACCESS_KEY_ID]" \
+  -e AWS_DEFAULT_REGION="[AWS_REGION]" \
+  -e STACK_NAME="myswarmer" \
+  -e AWS_ACCOUNT="[AWS_ACCOUNT]" \
+   swarmer terraform/aws/scripts/dc-multi-az-simple-swarm.sh bootstrap
+...
+
+Apply complete! Resources: 6 added, 0 changed, 0 destroyed.
+
+The state of your infrastructure has been saved to the path
+below. This state is required to modify and destroy your
+infrastructure, so keep it safe. To inspect the complete state
+use the `terraform show` command.
+
+State path: .terraform/terraform.tfstate
+
+$ ...
+</pre>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline14" class="outline-3">
+<h3 id="orgheadline14"><span class="section-number-3">3.4</span> Configure your access to your swarm cluster</h3>
+<div class="outline-text-3" id="text-3-4">
+<p>
+Your cluster is located on a private subnet with no public facing IP. To be able to target it or simply connect to it, you have two options:
+</p>
+
+<ul class="org-ul">
+<li>through ssh tunnels</li>
+<li>through the VPN</li>
+</ul>
+</div>
+
+
+<div id="outline-container-orgheadline10" class="outline-4">
+<h4 id="orgheadline10"><span class="section-number-4">3.4.1</span> SSH tunnels</h4>
+<div class="outline-text-4" id="text-3-4-1">
+<p>
+This section describes how to establish ssh connections or tunnels through the bastion instance of the VPC. As it can be quite an annoying step, we've made a simple script which generates an ssh config and download the private key that you'll have to copy in your local ssh directory ( probably ~/.ssh ).
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash">$ docker run --rm -it \ 
+   -e AWS_SECRET_ACCESS_KEY="[AWS_SECRET_ACCESS_KEY]" \
+   -e AWS_ACCESS_KEY_ID="[AWS_ACCESS_KEY_ID]" \
+   -e AWS_DEFAULT_REGION="[AWS_REGION]" \
+   -e STACK_NAME="myswarmer" \
+   -e AWS_ACCOUNT="[AWS_ACCOUNT]" \
+   -e PASSPHRASE="[a passphrase]" \
+   -v /tmp:/output
+    swarmer terraform/aws/scripts/dc-multi-az-simple-swarm.sh config-ssh 
+ ...
+$ cat /tmp/config &gt;&gt; ~/.ssh/config
+ #the docker container generates files that belong to the root user
+$ sudo cp /tmp/myswarmer.key ~/.ssh
+$ sudo chown $USER ~/.ssh/myswarmer.key
+$ cat ~/.ssh/config
+ ...
+ Host myswarmer-swarm-zone-a-swarm_manager-0
+    HostName 10.233.1.205
+    IdentityFile ~/.ssh/myswarmer.key
+    ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+
+ Host myswarmer-swarm-zone-a-swarm_manager-1
+    HostName 10.233.1.254
+    IdentityFile ~/.ssh/myswarmer.key
+    ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+
+ Host myswarmer-swarm-zone-a-swarm_manager-2
+    HostName 10.233.1.253
+    IdentityFile ~/.ssh/myswarmer.key
+    ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+
+ Host myswarmer-swarm-zone-b-swarm_manager-0
+    HostName 10.233.3.8
+    IdentityFile ~/.ssh/myswarmer.key
+    ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+
+ Host myswarmer-swarm-zone-b-swarm_manager-1
+    HostName 10.233.3.54
+    IdentityFile ~/.ssh/myswarmer.key
+    ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+
+ Host myswarmer-swarm-zone-b-swarm_manager-2
+    HostName 10.233.3.45
+    IdentityFile ~/.ssh/myswarmer.key
+    ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+
+ Host "10.233.*"
+    IdentityFile ~/.ssh/myswarmer.key
+    ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
+
+$ ...
+</pre>
+</div>
+
+<p>
+You will notice that there is one entry per host, plus one global entry matching every ip beginning with 10.233.*. This uncommon /16 subnet has been chosen to avoid IP overlapping with your privates subnets. It can be configured if it doesn't suits you. See <a href="terraform/aws/vpc/variables.tf">terraform/aws/vpc/variables.tf</a>. 
+</p>
+
+<p>
+IMPORTANT! Only the hosts that are "up" are added to the config. By "up", we mean that they have at least joined the consul cluster. If you have no host in the config, retrieve the privates ips of your instances through the aws console and ssh into them using their private IP; the global "10.233.*" is dedicated to this.
+</p>
+
+<p>
+You'll also notice that each entry refers to a "myswarmer.key". This is the private ssh key that has been generated during the init phase and uploaded to s3.
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline11" class="outline-4">
+<h4 id="orgheadline11"><span class="section-number-4">3.4.2</span> VPN access</h4>
+<div class="outline-text-4" id="text-3-4-2">
+<p>
+This section describes how to establish a vpn connection with openvpn. You need to have a proper install of openvpn on your box. You also need the private ssh key. Refer to the previous section to know how to retrieve it.
+</p>
+
+<p>
+The first thing you need is to generate your VPN keys and retrieve the openvpn configuration.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash">$ # the ip of the bastion is referred in the generated ssh config, and also 
+$ ssh myswarmer-bastion /opt/ovpn-client-config.sh MYNAME &gt; ~/MYNAME.myswarmer-ovpn.conf
+Generating a 2048 bit RSA private key
+..........................+++
+................+++
+writing new private key to '/etc/openvpn/pki/private/MYNAME.key.XXXXigMGgg'
+-----
+Using configuration from /usr/share/easy-rsa/openssl-1.0.cnf
+Check that the request matches the signature
+Signature ok
+The Subject's Distinguished Name is as follows
+commonName            :ASN.1 12:'MYNAME'
+Certificate is to be certified until Apr  6 15:59:42 2026 GMT (3650 days)
+
+Write out database with 1 new entries
+Data Base Updated
+
+$ sudo openvpn ~/MYNAME.myswarmer-ovpn.conf
+...
+Fri Apr  8 17:58:48 2016 TLS Error: TLS handshake failed
+Fri Apr  8 17:58:48 2016 SIGUSR1[soft,tls-error] received, process restarting
+Fri Apr  8 17:58:50 2016 WARNING: Your certificate is not yet valid!
+Fri Apr  8 17:58:50 2016 Control Channel Authentication: tls-auth using INLINE static key file
+Fri Apr  8 17:58:50 2016 UDPv4 link local: [undef]
+Fri Apr  8 17:58:50 2016 UDPv4 link remote: [AF_INET]52.48.31.60:1194
+Fri Apr  8 17:58:50 2016 [52.48.31.60] Peer Connection Initiated with [AF_INET]52.48.31.60:1194
+Fri Apr  8 17:58:52 2016 TUN/TAP device tun0 opened
+Fri Apr  8 17:58:52 2016 do_ifconfig, tt-&gt;ipv6=0, tt-&gt;did_ifconfig_ipv6_setup=0
+Fri Apr  8 17:58:52 2016 /usr/bin/ip link set dev tun0 up mtu 1500
+Fri Apr  8 17:58:52 2016 /usr/bin/ip addr add dev tun0 local 192.168.255.6 peer 192.168.255.5
+Fri Apr  8 17:58:52 2016 Initialization Sequence Completed
+
+$ # get the internal ip of one of the members of the cluster and try to get consul info:
+
+$ curl 10.233.1.145:8500/v1/catalog
+{"consul":[],"swarm-4000":[]}%
+$ # BINGO!
+</pre>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline12" class="outline-4">
+<h4 id="orgheadline12"><span class="section-number-4">3.4.3</span> SSH to a node</h4>
+<div class="outline-text-4" id="text-3-4-3">
+<p>
+You can ssh to a swarm with a simple ssh command:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash">$ ssh core@myswarmer-swarm-zone-a-swarm_manager-0
+CoreOS alpha (991.0.0)
+core@ip-172-233-3-45 ~ $ 
+core@ip-172-233-3-45 ~ $ docker ps
+CONTAINER ID        IMAGE                           COMMAND                  CREATED             STATUS              PORTS                                   NAMES
+f08eb5612b51        gliderlabs/registrator:latest   "/bin/registrator -in"   27 minutes ago      Up 27 minutes                                               registrator
+666dcc033b8f        swarm:latest                    "/swarm manage -H :40"   27 minutes ago      Up 27 minutes       2375/tcp, 172.233.3.45:4000-&gt;4000/tcp   swarm-manager
+14dc3ed89cb6        swarm:latest                    "/swarm join --advert"   27 minutes ago      Up 27 minutes       2375/tcp                                swarm-agent
+
+core@ip-172-233-3-45 ~ $ ...
+</pre>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline13" class="outline-4">
+<h4 id="orgheadline13"><span class="section-number-4">3.4.4</span> Create an ssh tunnel to swarm</h4>
+<div class="outline-text-4" id="text-3-4-4">
+<p>
+If you don't want to use the VPN, you can create an ssh tunnel to ease the deployment of a container from your box
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash"># you have to replace the 172.233.1.205 ip with the private ip of the node you selected
+$ ssh -fqnNT -L localhost:4000:172.233.1.205:4000 core@myswarmer-swarm-zone-a-swarm_manager-0
+
+$ export DOCKER_HOST=localhost:4000
+$ docker info
+Containers: 18
+ Running: 18
+ Paused: 0
+ Stopped: 0
+Images: 18
+Server Version: swarm/1.1.3
+Role: replica
+Primary: 172.233.3.8:4000
+Strategy: spread
+Filters: health, port, dependency, affinity, constraint
+Nodes: 6
+ ip-172-233-1-205.eu-west-1.compute.internal: 172.233.1.205:2375
+  └ Status: Healthy
+  └ Containers: 3
+  └ Reserved CPUs: 0 / 2
+  └ Reserved Memory: 0 B / 8.19 GiB
+  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
+  └ Error: (none)
+  └ UpdatedAt: 2016-03-24T10:57:49Z
+ ip-172-233-1-253.eu-west-1.compute.internal: 172.233.1.253:2375
+  └ Status: Healthy
+  └ Containers: 3
+  └ Reserved CPUs: 0 / 2
+  └ Reserved Memory: 0 B / 8.19 GiB
+  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
+  └ Error: (none)
+  └ UpdatedAt: 2016-03-24T10:57:37Z
+ ip-172-233-1-254.eu-west-1.compute.internal: 172.233.1.254:2375
+  └ Status: Healthy
+  └ Containers: 3
+  └ Reserved CPUs: 0 / 2
+  └ Reserved Memory: 0 B / 8.19 GiB
+  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
+  └ Error: (none)
+  └ UpdatedAt: 2016-03-24T10:57:45Z
+ ip-172-233-3-8.eu-west-1.compute.internal: 172.233.3.8:2375
+  └ Status: Healthy
+  └ Containers: 3
+  └ Reserved CPUs: 0 / 2
+  └ Reserved Memory: 0 B / 8.19 GiB
+  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
+  └ Error: (none)
+  └ UpdatedAt: 2016-03-24T10:57:43Z
+ ip-172-233-3-45.eu-west-1.compute.internal: 172.233.3.45:2375
+  └ Status: Healthy
+  └ Containers: 3
+  └ Reserved CPUs: 0 / 2
+  └ Reserved Memory: 0 B / 8.19 GiB
+  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
+  └ Error: (none)
+  └ UpdatedAt: 2016-03-24T10:57:26Z
+ ip-172-233-3-54.eu-west-1.compute.internal: 172.233.3.54:2375
+  └ Status: Healthy
+  └ Containers: 3
+  └ Reserved CPUs: 0 / 2
+  └ Reserved Memory: 0 B / 8.19 GiB
+  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
+  └ Error: (none)
+  └ UpdatedAt: 2016-03-24T10:57:42Z
+Plugins:
+ Volume:
+ Network:
+Kernel Version: 4.4.6-coreos
+Operating System: linux
+Architecture: amd64
+CPUs: 12
+Total Memory: 49.14 GiB
+Name: a540944837d6
+
+$ ...
+</pre>
+</div>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline15" class="outline-3">
+<h3 id="orgheadline15"><span class="section-number-3">3.5</span> Destroy the cluster and the vpc</h3>
+<div class="outline-text-3" id="text-3-5">
+<p>
+You can destroy the resources with the same scripts used to terraform by simply replacing the "bootstrap" command with "destroy"
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgheadline16" class="outline-3">
+<h3 id="orgheadline16"><span class="section-number-3">3.6</span> Debugging</h3>
+<div class="outline-text-3" id="text-3-6">
+<p>
+The best way to debug the system is to run the docker tool container with the proper env vars set, and attached to your src volume. You still have to get familiar with terraform, which is not the purpose of this guide.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash">$ docker run --rm -it \ 
+  -v $(pwd):/src
+  -e AWS_SECRET_ACCESS_KEY="[AWS_SECRET_ACCESS_KEY]" \
+  -e AWS_ACCESS_KEY_ID="[AWS_ACCESS_KEY_ID]" \
+  -e AWS_DEFAULT_REGION="[AWS_REGION]" \
+  -e STACK_NAME="myswarmer" \
+  -e AWS_ACCOUNT="[AWS_ACCOUNT]" \
+   swarmer 
+bash-4.3# ...
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="date">Created: 2016-04-25 lun. 11:41</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

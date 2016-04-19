@@ -13,18 +13,8 @@
   "provisioners": [
     {
       "type": "file",
-      "source": "scripts/openvpn.service",
-      "destination" : "/tmp/openvpn.service"
-    },
-    {
-      "type": "file",
-      "source": "scripts/init-ovpndata.sh",
-      "destination" : "/tmp/init-ovpndata.sh"
-    },
-    {
-      "type": "file",
-      "source": "scripts/ovpn-client-config.sh",
-      "destination" : "/tmp/ovpn-client-config.sh"
+      "source": "./scripts/",
+      "destination" : "/tmp"
     },
     {
       "type": "shell",

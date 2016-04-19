@@ -1,7 +1,7 @@
 #!/bin/bash
-if [[ -d /etc/docker.conf.d ]]; then
+if [[ -d /etc/swarmer/docker.conf.d ]]; then
     TMP=$DOCKER_OPTS
-    for conf in /etc/docker.conf.d/*; do
+    for conf in /etc/swarmer/docker.conf.d/*; do
         logger -t "docker-configurator" "adding conf file $conf"
         source $conf
         TMP="$TMP $DOCKER_OPTS"

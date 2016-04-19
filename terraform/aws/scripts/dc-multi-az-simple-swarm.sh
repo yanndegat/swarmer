@@ -42,7 +42,7 @@ config-ssh(){
     SSH_OPTS="-oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null"
     SSH_PROXY_COMMAND="ProxyCommand ssh -l core -i ~/.ssh/$STACK_NAME.key $SSH_OPTS $BASTION_IP ncat %h %p"
 
-    for host in $(ssh -q -o "$SSH_PROXY_COMMAND" $SSH_OPTS -i ~/.ssh/$STACK_NAME.key core@$CONSUL_IP "/opt/scripts/consul/consul members" | tail -n+2 | tr -s ' ' '|' | cut -d'|' -f1,2); do
+    for host in $(ssh -q -o "$SSH_PROXY_COMMAND" $SSH_OPTS -i ~/.ssh/$STACK_NAME.key core@$CONSUL_IP "/opt/swarmer/consul members" | tail -n+2 | tr -s ' ' '|' | cut -d'|' -f1,2); do
         HOSTNAME=$(echo $host | cut -d'|' -f1 | sed "s/'//g")
         HOSTIP=$(echo $host | cut -d'|' -f2 | cut -d':' -f1)
 
@@ -91,7 +91,7 @@ bootstrap(){
     # get vpc variables
     $TFCMD -c vpc -i vpc output > $TF_VARFILE
 
-    SWARM_AMI=$(swarm-ami-id)
+    SWARMER_AMI=$(swarmer-ami-id)
 
     #make swarm cluster
     cat >> $TF_VARFILE <<EOF
@@ -100,6 +100,7 @@ name = "swarm"
 stack_name = "${STACK_NAME}"
 bucket = "${BUCKET_NAME}"
 aws_region = "${AWS_DEFAULT_REGION}"
+swarmer_ami = "$SWARMER_AMI"
 EOF
 
     $TFCMD -c swarm-simple-multi-az -i swarm-multiaz -f $TF_VARFILE apply

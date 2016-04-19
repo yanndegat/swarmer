@@ -1,0 +1,12 @@
+[Unit]
+Description=Private Docker Registry
+PartOf=swarmer.service
+After=swarmer.service swarm.service consul.service docker.service
+Requires=swarm.service consul.service docker.service
+[Service]
+Restart=always
+RestartSec=10s
+ExecStart=/opt/swarmer/registry/start-registry
+ExecStop=/usr/bin/docker stop registry
+[Install]
+WantedBy=default.target

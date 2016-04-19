@@ -43,17 +43,14 @@ case $1 in
     s3bucket)
         create-s3bucket
         ;;
-    consul-ami)
-        consul-ami
-        ;;
-    swarm-ami)
-        swarm-ami
+    all-amis)
+        all-amis
         ;;
     swarmer-ami)
         swarmer-ami
         ;;
-    all-amis)
-        all-amis
+    bastion-ami)
+        bastion-vpn-ami
         ;;
     init)
         init

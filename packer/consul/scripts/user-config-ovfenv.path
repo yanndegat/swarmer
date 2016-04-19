@@ -1,5 +1,0 @@
-[Unit]
-Description=Hack to bypass NoSuchFile error
-[Path]
-DirectoryNotEmpty=/etc/ovfenvpath
-MakeDirectory=yes

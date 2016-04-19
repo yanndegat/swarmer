@@ -5,12 +5,12 @@ CONSUL_CLUSTER_SIZE=3
 CONSUL_MODE="server"
 CONSUL_SERVER_OPTS="-server -bootstrap-expect $CONSUL_CLUSTER_SIZE"
 CONSUL_DATADIR="/var/lib/consul"
-CONSUL_OPTS="-data-dir $CONSUL_DATADIR -domain swarmer"
+BASE_CONSUL_OPTS="-data-dir $CONSUL_DATADIR -domain swarmer"
 ADMIN_NETWORK="default"
 CONSUL_BIN=$(readlink -f $(dirname $0))/consul
 
-if [[ -f "/etc/consul/consul.conf" ]]; then
-    . /etc/consul/consul.conf
+if [[ -f "/etc/swarmer/swarmer.conf" ]]; then
+    . /etc/swarmer/swarmer.conf
 fi
 
 if [[ ! -x $CONSUL_BIN ]]; then
@@ -23,57 +23,6 @@ if [[ ! -d $CONSUL_DATADIR ]]; then
 fi
 
 verbose=0
-
-HOSTIP=$(gethostadminipaddr)
-
-
-# Usage info
-show_help() {
-cat << EOF
-Usage: ${0##*/} [-ahv] [-j JOINIPADDR] [-c CLUSTER_SIZE] start|stop
-Handles the lifecycle of a consul agent
-
-COMMANDS:
-    start              Starts a consul agent
-    stop               Stops a consul agent
-OPTIONS:
-    -a                 agent mode only
-    -c CLUSTER_SIZE    sets the cluster size expected.
-                       Defaults to $CONSUL_CLUSTER_SIZE
-    -h                 display this help and exit
-    -j JOINIPADDR      sets the join ADDR
-                       defaults to /etc/consul/joinaddr.conf
-    -v                 verbose mode. Can be used multiple
-                       times for increased verbosity.
-EOF
-}
-
-start() {
-    stop
-
-    case $CONSUL_MODE in
-        agent)
-            CONSUL_OPTS="$CONSUL_OPTS"
-        ;;
-        server)
-            CONSUL_OPTS="$CONSUL_SERVER_OPTS $CONSUL_OPTS"
-        ;;
-        *)
-            logger -t "$SERVICE_NAME" "Unsupported mode $CONSUL_MODE. Choose either agent|server. Exiting."
-            exit 7
-        ;;
-    esac
-
-    JOIN=$(getjoinipaddr)
-    if [[ $? == 0 ]]; then
-        CONSUL_OPTS="$CONSUL_OPTS -retry-join=$JOIN -rejoin"
-    fi
-
-    CONSUL_OPTS="$CONSUL_OPTS -advertise=$HOSTIP -client=0.0.0.0"
-
-    logger -t "$SERVICE_NAME" "Starting agent with opts: $CONSUL_OPTS"
-    $CONSUL_BIN agent $CONSUL_OPTS
-}
 
 getjoinipaddr(){
     JOIN=$(peers)
@@ -103,6 +52,58 @@ gethostadminipaddr(){
     done
 
     printf "$(ip route | grep "^$ADMIN_NETWORK" | sed 's/.*src \([0-9\.]*\) .*/\1/g')"
+}
+
+
+HOSTIP=$(gethostadminipaddr)
+
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-ahv] [-j JOINIPADDR] [-c CLUSTER_SIZE] start|stop
+Handles the lifecycle of a consul agent
+
+COMMANDS:
+    start              Starts a consul agent
+    stop               Stops a consul agent
+OPTIONS:
+    -a                 agent mode only
+    -c CLUSTER_SIZE    sets the cluster size expected.
+                       Defaults to $CONSUL_CLUSTER_SIZE
+    -h                 display this help and exit
+    -j JOINIPADDR      sets the join ADDR
+                       defaults to /etc/swarmer/joinaddr.conf
+    -v                 verbose mode. Can be used multiple
+                       times for increased verbosity.
+EOF
+}
+
+start() {
+    stop
+
+    case $CONSUL_MODE in
+        agent)
+            CONSUL_OPTS="$CONSUL_OPTS"
+        ;;
+        server)
+            CONSUL_OPTS="$CONSUL_SERVER_OPTS $CONSUL_OPTS"
+        ;;
+        *)
+            logger -t "$SERVICE_NAME" "Unsupported mode $CONSUL_MODE. Choose either agent|server. Exiting."
+            exit 7
+        ;;
+    esac
+
+    JOIN=$(getjoinipaddr)
+    if [[ $? == 0 ]]; then
+        CONSUL_OPTS="$CONSUL_OPTS -retry-join=$JOIN -rejoin"
+    fi
+
+    CONSUL_OPTS="$CONSUL_OPTS -advertise=$HOSTIP -client=0.0.0.0"
+
+    logger -t "$SERVICE_NAME" "Starting agent with opts: $CONSUL_OPTS"
+    $CONSUL_BIN agent $BASE_CONSUL_OPTS $CONSUL_OPTS
 }
 
 stop() {

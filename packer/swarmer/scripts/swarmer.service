@@ -1,0 +1,11 @@
+[Unit]
+Description=Swarmer
+After=network-online.target
+Requires=network-online.target
+Before=consul.service docker.service swarm.service dnsmasq.service registry.service registrator.service docker-configurator.service
+Wants=consul.service docker.service swarm.service dnsmasq.service registry.service registrator.service docker-configurator.service
+[Service]
+ExecStart=/bin/echo "Launching swarmer services"
+ExecStop=/bin/echo "Stopping swarmer services"
+[Install]
+WantedBy=swarmer.target

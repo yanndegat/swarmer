@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2016-04-15 ven. 13:45 -->
+<!-- 2016-04-25 lun. 11:35 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="viewport" content="width=device-width, initial-scale=1" />
 <title>Swarmer: a Swarm Cluster Maker</title>
@@ -154,64 +154,34 @@ for the JavaScript code in this tag.
 <div id="text-table-of-contents">
 <ul>
 <li><a href="#orgheadline1">1. Description</a></li>
-<li><a href="#orgheadline6">2. Pre-Requisites</a>
+<li><a href="#orgheadline2">2. Pre-Requisites</a></li>
+<li><a href="#orgheadline3">3. Quickstart</a></li>
+<li><a href="#orgheadline4">4. Getting Started on AWS</a></li>
+<li><a href="#orgheadline12">5. Play with your swarm cluster</a>
 <ul>
-<li><a href="#orgheadline4">2.1. With docker [Recommanded]</a>
+<li><a href="#orgheadline5">5.1. Configure DNS resolution</a></li>
+<li><a href="#orgheadline6">5.2. Using the swarm cluster</a></li>
+<li><a href="#orgheadline7">5.3. Using the private registry</a></li>
+<li><a href="#orgheadline8">5.4. Run the examples</a></li>
+<li><a href="#orgheadline11">5.5. Swarmer Components</a>
 <ul>
-<li><a href="#orgheadline2">2.1.1. Use the image</a></li>
-<li><a href="#orgheadline3">2.1.2. Build the image</a></li>
-</ul>
-</li>
-<li><a href="#orgheadline5">2.2. Without docker</a></li>
-</ul>
-</li>
-<li><a href="#orgheadline31">3. Getting Started</a>
-<ul>
-<li><a href="#orgheadline9">3.1. Swarmer Components</a>
-<ul>
-<li><a href="#orgheadline7">3.1.1. Architecture guidelines</a></li>
-<li><a href="#orgheadline8">3.1.2. Swarmer is architectured with the following components :</a></li>
-</ul>
-</li>
-<li><a href="#orgheadline19">3.2. Try Swarmer on your box with Vagrant</a>
-<ul>
-<li><a href="#orgheadline13">3.2.1. Building the boxes</a></li>
-<li><a href="#orgheadline14">3.2.2. Booting the swarm cluster</a></li>
-<li><a href="#orgheadline18">3.2.3. Troubleshootings</a></li>
-</ul>
-</li>
-<li><a href="#orgheadline30">3.3. Try Swarmer on your Amazon AWS Account</a>
-<ul>
-<li><a href="#orgheadline20">3.3.1. Init S3, Keypair and AMIs</a></li>
-<li><a href="#orgheadline21">3.3.2. Create the VPC</a></li>
-<li><a href="#orgheadline22">3.3.3. Create the Swarm!</a></li>
-<li><a href="#orgheadline27">3.3.4. Configure your access to your swarm cluster</a></li>
-<li><a href="#orgheadline28">3.3.5. Destroy the cluster and the vpc</a></li>
-<li><a href="#orgheadline29">3.3.6. Debugging</a></li>
+<li><a href="#orgheadline9">5.5.1. Architecture guidelines</a></li>
+<li><a href="#orgheadline10">5.5.2. Swarmer is architectured with the following components :</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a href="#orgheadline37">4. Play with your swarm cluster</a>
+<li><a href="#orgheadline22">6. Considerations &amp; Roadmap</a>
 <ul>
-<li><a href="#orgheadline32">4.1. Configure DNS resolution</a></li>
-<li><a href="#orgheadline33">4.2. Using the swarm cluster</a></li>
-<li><a href="#orgheadline34">4.3. Using a custom private registry with vagrant</a></li>
-<li><a href="#orgheadline35">4.4. Deploy a docker container</a></li>
-<li><a href="#orgheadline36">4.5. Using the private registry</a></li>
-</ul>
-</li>
-<li><a href="#orgheadline47">5. Considerations &amp; Roadmap</a>
-<ul>
-<li><a href="#orgheadline38">5.1. CoreOS alpha channel</a></li>
-<li><a href="#orgheadline39">5.2. Use docker-machine</a></li>
-<li><a href="#orgheadline40">5.3. Run consul and swarm services as docker containers</a></li>
-<li><a href="#orgheadline41">5.4. Monitoring</a></li>
-<li><a href="#orgheadline42">5.5. Server.yml to bootstrap AWS</a></li>
-<li><a href="#orgheadline43">5.6. Running on GCE</a></li>
-<li><a href="#orgheadline44">5.7. Running on Azure</a></li>
-<li><a href="#orgheadline45">5.8. Running on premise</a></li>
-<li><a href="#orgheadline46">5.9. How to do rolling upgrades of the infrastructure with terraform&#x2026;?</a></li>
+<li><a href="#orgheadline13">6.1. CoreOS alpha channel</a></li>
+<li><a href="#orgheadline14">6.2. Use docker-machine</a></li>
+<li><a href="#orgheadline15">6.3. Run consul and swarm services as docker containers</a></li>
+<li><a href="#orgheadline16">6.4. Monitoring</a></li>
+<li><a href="#orgheadline17">6.5. Server.yml to bootstrap AWS</a></li>
+<li><a href="#orgheadline18">6.6. Running on GCE</a></li>
+<li><a href="#orgheadline19">6.7. Running on Azure</a></li>
+<li><a href="#orgheadline20">6.8. Running on premise</a></li>
+<li><a href="#orgheadline21">6.9. How to do rolling upgrades of the infrastructure with terraform&#x2026;?</a></li>
 </ul>
 </li>
 </ul>
@@ -250,8 +220,8 @@ Swarmer is built on top of the following components:
 </div>
 
 
-<div id="outline-container-orgheadline6" class="outline-2">
-<h2 id="orgheadline6"><span class="section-number-2">2</span> Pre-Requisites</h2>
+<div id="outline-container-orgheadline2" class="outline-2">
+<h2 id="orgheadline2"><span class="section-number-2">2</span> Pre-Requisites</h2>
 <div class="outline-text-2" id="text-2">
 <p>
 To use this project you will need at least this list of tools properly installed on your box:
@@ -264,78 +234,146 @@ To use this project you will need at least this list of tools properly installed
 <li>virtualbox 5.0</li>
 </ul>
 </div>
-
-<div id="outline-container-orgheadline4" class="outline-3">
-<h3 id="orgheadline4"><span class="section-number-3">2.1</span> With docker [Recommanded]</h3>
-<div class="outline-text-3" id="text-2-1">
-<p>
-You can then use the provided docker <a href="Dockerfile">container</a> to avoid installing the entire toolbox on your computer by either using the image available on the docker hub or by building it yourself.
-</p>
-</div>
-
-<div id="outline-container-orgheadline2" class="outline-4">
-<h4 id="orgheadline2"><span class="section-number-4">2.1.1</span> Use the image</h4>
-<div class="outline-text-4" id="text-2-1-1">
-<div class="org-src-container">
-
-<pre class="src src-bash" id="orgsrcblock1">docker run --rm -it yanndegat/swarmer
-bash-4.3# ...
-</pre>
-</div>
-</div>
 </div>
 
 
-<div id="outline-container-orgheadline3" class="outline-4">
-<h4 id="orgheadline3"><span class="section-number-4">2.1.2</span> Build the image</h4>
-<div class="outline-text-4" id="text-2-1-2">
-<div class="org-src-container">
-
-<pre class="src src-bash" id="orgsrcblock2">make latest
-docker run --rm -it swarmer
-bash-4.3# ...
-</pre>
-</div>
-</div>
-</div>
-</div>
-
-
-<div id="outline-container-orgheadline5" class="outline-3">
-<h3 id="orgheadline5"><span class="section-number-3">2.2</span> Without docker</h3>
-<div class="outline-text-3" id="text-2-2">
-<p>
-If you chose not to use the docker image, you will have to install those additional tools :
-</p>
-
-<ul class="org-ul">
-<li>terraform 0.6.14</li>
-<li>packer 0.8.6</li>
-<li>python 2.7</li>
-<li>awscli (pip install awscli)</li>
-<li>gnupg 2.1</li>
-<li>jq 1.5</li>
-<li>curl</li>
-</ul>
-</div>
-</div>
-</div>
-
-
-<div id="outline-container-orgheadline31" class="outline-2">
-<h2 id="orgheadline31"><span class="section-number-2">3</span> Getting Started</h2>
+<div id="outline-container-orgheadline3" class="outline-2">
+<h2 id="orgheadline3"><span class="section-number-2">3</span> Quickstart</h2>
 <div class="outline-text-2" id="text-3">
 <p>
-Once you have all the required tools installed on your box, you can follow this guide to setup a swarm cluster on your machine or on your AWS account.
+To quickly bootstrap a swarm cluster with vagrant on your local machine, configure the <a href="servers.yml">servers.yml</a> file and type the following commands. 
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash" id="orgsrcblock1">$ git clone https://github.com/yanndegat/swarmer
+$ cd swarmer
+$ vi servers.yml
+...
+$ vagrant up
+==&gt; box: Loading metadata for box 'yanndegat/swarmer'
+    box: URL: https://atlas.hashicorp.com/yanndegat/swarmer
+==&gt; box: Adding box 'yanndegat/swarmer' (v0.0.1) for provider: virtualbox
+    box: Downloading: https://atlas.hashicorp.com/yanndegat/boxes/swarmer/versions/0.0.1/providers/virtualbox.box
+    box: Progress: 26% (Rate: 1981k/s, Estimated time remaining: 0:02:24)
+...
+$ ./setup.sh
+try command:
+export DOCKER_HOST=swarm-4000.service.swarmer:4000
+docker info
+
+ or go to http://consul.service.swarmer:8500/ui
+$
+</pre>
+</div>
+
+<p>
+Go to <a href="http://consul.service.swarmer:8500/ui">http://consul.service.swarmer:8500/ui</a>
+</p>
+
+<p>
+If you encounter any problem, refer to the next sections.
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline4" class="outline-2">
+<h2 id="orgheadline4"><span class="section-number-2">4</span> Getting Started on AWS</h2>
+<div class="outline-text-2" id="text-4">
+<p>
+Refer to the <a href="terraform/aws/README.html">README</a> file.
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline12" class="outline-2">
+<h2 id="orgheadline12"><span class="section-number-2">5</span> Play with your swarm cluster</h2>
+<div class="outline-text-2" id="text-5">
+<p>
+Now we can play with swarm.
 </p>
 </div>
 
-<div id="outline-container-orgheadline9" class="outline-3">
-<h3 id="orgheadline9"><span class="section-number-3">3.1</span> Swarmer Components</h3>
-<div class="outline-text-3" id="text-3-1">
-</div><div id="outline-container-orgheadline7" class="outline-4">
-<h4 id="orgheadline7"><span class="section-number-4">3.1.1</span> Architecture guidelines</h4>
-<div class="outline-text-4" id="text-3-1-1">
+<div id="outline-container-orgheadline5" class="outline-3">
+<h3 id="orgheadline5"><span class="section-number-3">5.1</span> Configure DNS resolution</h3>
+<div class="outline-text-3" id="text-5-1">
+<p>
+To resolv names, you have to configure a dns service that will forward the requests to consul. A docker-compose file is provided (<a href="dns-proxy-compose.yml">dns-proxy-compose.yml</a>).
+</p>
+
+<p>
+This compose file starts a dnsmasq service with net=host that will target $CONSULIP consul agent. This only works with vagrant or when the VPN is setup.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash">$ # check your /etc/resolv.conf file
+$ cat /etc/resolv.conf
+nameserver 127.0.0.1
+...
+$ # eventually run the following command for your next boot
+$ sudo su
+root $ echo "nameserver 127.0.0.1" &gt; /etc/resolv.conf.head
+root $ exit
+$ export CONSULIP=192.168.101.101
+$ docker-compose -d -f dns-proxy-compose.yml up -d
+$ curl registry.service.swarmer:5000/v2/_catalog
+{"repositories":[]}
+$ ...
+</pre>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline6" class="outline-3">
+<h3 id="orgheadline6"><span class="section-number-3">5.2</span> Using the swarm cluster</h3>
+<div class="outline-text-3" id="text-5-2">
+<p>
+You can now use your swarm cluster to run docker containers as simply as you would do to run a container on your local docker engine. All you have to do is 
+target the IP of one of your swarm node. 
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-bash">export DOCKER_HOST=swarm-4000.service.swarmer:4000
+docker pull alpine
+docker run --rm -it alpine /bin/sh
+/ # ...
+</pre>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline7" class="outline-3">
+<h3 id="orgheadline7"><span class="section-number-3">5.3</span> Using the private registry</h3>
+<div class="outline-text-3" id="text-5-3">
+<p>
+The private insecure registry which is automatically started on the swarm cluster is registered on the "registry.service.swarmer:5000" name. So you have to tag &amp; push docker images with this name if you want the nodes to be able to download your images.
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline8" class="outline-3">
+<h3 id="orgheadline8"><span class="section-number-3">5.4</span> Run the examples</h3>
+<div class="outline-text-3" id="text-5-4">
+<p>
+Examples are available in the <a href="examples">examples</a> directory. You can play with them to discover how to work with docker swarm.
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-orgheadline11" class="outline-3">
+<h3 id="orgheadline11"><span class="section-number-3">5.5</span> Swarmer Components</h3>
+<div class="outline-text-3" id="text-5-5">
+</div><div id="outline-container-orgheadline9" class="outline-4">
+<h4 id="orgheadline9"><span class="section-number-4">5.5.1</span> Architecture guidelines</h4>
+<div class="outline-text-4" id="text-5-5-1">
 <ul class="org-ul">
 <li>Every component of the system must be able to boot/reboot without having to be provisionned with configuration elements other than via cloud init.</li>
 <li>Every component of the system must be able to discover its pairs and join them</li>
@@ -345,9 +383,9 @@ Once you have all the required tools installed on your box, you can follow this 
 </div>
 
 
-<div id="outline-container-orgheadline8" class="outline-4">
-<h4 id="orgheadline8"><span class="section-number-4">3.1.2</span> Swarmer is architectured with the following components :</h4>
-<div class="outline-text-4" id="text-3-1-2">
+<div id="outline-container-orgheadline10" class="outline-4">
+<h4 id="orgheadline10"><span class="section-number-4">5.5.2</span> Swarmer is architectured with the following components :</h4>
+<div class="outline-text-4" id="text-5-5-2">
 <ul class="org-ul">
 <li>a consul cluster setup, which consists of a set of consul agents running in "server" mode, and additionnal nodes running in "agent" mode.
 The consul cluster could be used :
@@ -370,812 +408,16 @@ Some nodes could play both "consul server" and "swarm server" roles to avoid boo
 </div>
 </div>
 </div>
-
-
-<div id="outline-container-orgheadline19" class="outline-3">
-<h3 id="orgheadline19"><span class="section-number-3">3.2</span> Try Swarmer on your box with Vagrant</h3>
-<div class="outline-text-3" id="text-3-2">
-<p>
-Things shouldn't be harder than a single vagrant up. Nodes configuration is located in the <a href="servers.yml.example">servers.yml.example</a> file. By default it will boot 3 servers with 1cpu/1g ram. You can edit this file to adjust it to your needs. But before booting any server, you will need to build the vagrant boxes!
-</p>
-</div>
-
-<div id="outline-container-orgheadline13" class="outline-4">
-<h4 id="orgheadline13"><span class="section-number-4">3.2.1</span> Building the boxes</h4>
-<div class="outline-text-4" id="text-3-2-1">
-<p>
-There are 3 boxes which have to be built: 
-</p>
-<ul class="org-ul">
-<li>a base box,</li>
-<li>a consul box which inherits from the base box</li>
-<li>a swarm box which inherits from the consul box</li>
-</ul>
-
-<p>
-IMPORTANT! To build the vagrant boxes, you can't use the container toolbox, you have to install packer on your machine.
-</p>
-</div>
-
-<ol class="org-ol"><li><a id="orgheadline10"></a>Base box<br  /><div class="outline-text-5" id="text-3-2-1-1">
-<p>
-The base box is based on the 991.0.0 coreos iso image. This box will be used as a parent box for the consul and swarm boxes. As its build is pretty long and isn't very reliable, this basebox is mainly useful to speed the build phase of the consul and swarm boxes.
-</p>
-
-<p>
-It contains the vagrant insecure public key.
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash" id="orgsrcblock3">cd packer/consul
-make coreos-ovf
-</pre>
-</div>
-</div></li>
-
-<li><a id="orgheadline11"></a>Consul box<br  /><div class="outline-text-5" id="text-3-2-1-2">
-<p>
-The consul box is based on the coreos-ovf base image previously built. It contains :
-</p>
-
-<ul class="org-ul">
-<li>a systemd consul service that will boot a consul agent, configured through a cloud-init userdata configuration.</li>
-<li>a systemd docker configurator service to ease the configuration of the docker engine through cloud-init</li>
-</ul>
-
-<div class="org-src-container">
-
-<pre class="src src-bash" id="orgsrcblock4">cd packer/consul
-make vbox
-</pre>
-</div>
-</div></li>
-
-<li><a id="orgheadline12"></a>Swarm box<br  /><div class="outline-text-5" id="text-3-2-1-3">
-<p>
-The swarm box is based on the consul base ovf image previously built. It contains :
-</p>
-
-<ul class="org-ul">
-<li>a systemd swarm service that will boot a swarm agent, configured through a cloud-init userdata configuration.</li>
-<li>a systemd docker registrator service that will declare every running docker container to its local consul agent.</li>
-</ul>
-
-<div class="org-src-container">
-
-<pre class="src src-bash" id="orgsrcblock5">cd packer/swarm
-make vbox
-</pre>
-</div>
-</div></li></ol>
 </div>
 
 
 
-<div id="outline-container-orgheadline14" class="outline-4">
-<h4 id="orgheadline14"><span class="section-number-4">3.2.2</span> Booting the swarm cluster</h4>
-<div class="outline-text-4" id="text-3-2-2">
-<div class="org-src-container">
-
-<pre class="src src-bash">cp servers.yml.example servers.yml
-vi servers.yml
-...
-vagrant up
-...
-export DOCKER_HOST=192.168.101.101:4000
-docker info
-Containers: 20
- Running: 17
- Paused: 0
- Stopped: 3
-Images: 25
-Server Version: swarm/1.1.3
-Role: replica
-Primary: 192.168.101.102:4000
-Strategy: spread
-Filters: health, port, dependency, affinity, constraint
-Nodes: 3
- swarm-01: 192.168.101.101:2375
-  └ Status: Healthy
-  └ Containers: 6
-  └ Reserved CPUs: 0 / 2
-  └ Reserved Memory: 0 B / 3.09 GiB
-  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
-  └ Error: (none)
-  └ UpdatedAt: 2016-03-22T15:36:34Z
- swarm-02: 192.168.101.102:2375
-  └ Status: Healthy
-  └ Containers: 7
-  └ Reserved CPUs: 0 / 2
-  └ Reserved Memory: 0 B / 3.09 GiB
-  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
-  └ Error: (none)
-  └ UpdatedAt: 2016-03-22T15:36:13Z
- swarm-03: 192.168.101.103:2375
-  └ Status: Healthy
-  └ Containers: 7
-  └ Reserved CPUs: 0 / 2
-  └ Reserved Memory: 0 B / 3.09 GiB
-  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
-  └ Error: (none)
-  └ UpdatedAt: 2016-03-22T15:36:41Z
-Plugins:
- Volume:
- Network:
-Kernel Version: 4.4.6-coreos
-Operating System: linux
-Architecture: amd64
-CPUs: 6
-Total Memory: 9.269 GiB
-Name: 8e081c5df4b9
-</pre>
-</div>
-</div>
-</div>
-
-
-<div id="outline-container-orgheadline18" class="outline-4">
-<h4 id="orgheadline18"><span class="section-number-4">3.2.3</span> Troubleshootings</h4>
-<div class="outline-text-4" id="text-3-2-3">
-</div><ol class="org-ol"><li><a id="orgheadline15"></a>Check the consul agents<br  /><div class="outline-text-5" id="text-3-2-3-1">
-<p>
-Try to connect to any of your nodes through ssh and list the members of your consul cluster.
-</p>
-
-<p>
-The status of each node should be "alive". If its not the case, try to reboot the failing nodes.
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash">vagrant ssh swarm-01
-CoreOS alpha (991.0.0)
-core@swarm-01 ~ $ /opt/scripts/consul/consul members
-Node        Address               Status  Type    Build  Protocol  DC
-'swarm-01'  192.168.101.101:8301  alive   server  0.6.3  2         vagrant
-'swarm-02'  192.168.101.102:8301  alive   server  0.6.3  2         vagrant
-'swarm-03'  192.168.101.103:8301  alive   server  0.6.3  2         vagrant
-</pre>
-</div>
-</div></li>
-
-
-<li><a id="orgheadline16"></a>Check the swarm agents<br  /><div class="outline-text-5" id="text-3-2-3-2">
-<p>
-Try to connect to your nodes and check if every node has its swarm agents running. 
-Each node shall have at least one registrator and one swarm-agent containers running. Server nodes have an additional swarm-manager container running.
-</p>
-
-<p>
-If every agents are present on every node, but the swarm cluster is failing, try to inspect the logs of the agents.
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash">vagrant ssh swarm-01
-CoreOS alpha (991.0.0)
-core@swarm-01 ~ $ docker ps
-CONTAINER ID        IMAGE                           COMMAND                  CREATED             STATUS              PORTS                                                   NAMES
-585c091b4295        gliderlabs/registrator:latest   "/bin/registrator -in"   22 hours ago        Up 22 hours                                                                 registrator
-138437cf7740        swarm:latest                    "/swarm join --advert"   22 hours ago        Up 22 hours         2375/tcp                                                swarm-agent
-8e081c5df4b9        swarm:latest                    "/swarm manage -H :40"   22 hours ago        Up 22 hours         2375/tcp, 192.168.101.101:4000-&gt;4000/tcp                swarm-manager
-core@swarm-01 ~ $ 
-core@swarm-01 ~ $ docker logs swarm-manager
-...
-time="2016-03-21T17:21:50Z" level=info msg="Leader Election: Cluster leadership lost"
-time="2016-03-21T17:21:50Z" level=info msg="New leader elected: 192.168.101.102:4000"
-time="2016-03-21T17:22:00Z" level=info msg="Registered Engine swarm-03 at 192.168.101.103:2375"
-time="2016-03-21T17:22:00Z" level=info msg="Registered Engine swarm-01 at 192.168.101.101:2375"
-time="2016-03-21T17:22:25Z" level=info msg="Registered Engine swarm-02 at 192.168.101.102:2375"
-</pre>
-</div>
-</div></li>
-
-
-<li><a id="orgheadline17"></a>Check the systemd services<br  /><div class="outline-text-5" id="text-3-2-3-3">
-<p>
-If the agents aren't running, check for any systemd service error with journalctl and systemctl.
-</p>
-</div></li></ol>
-</div>
-</div>
-
-
-<div id="outline-container-orgheadline30" class="outline-3">
-<h3 id="orgheadline30"><span class="section-number-3">3.3</span> Try Swarmer on your Amazon AWS Account</h3>
-<div class="outline-text-3" id="text-3-3">
-<p>
-Things should be a "little bit harder" than a single vagrant up ;)
-Before booting the instances, we will have to create an ssh keypair and then install a brand new multi-az VPC, with its nat gateways and public and private subnets. We will also add a bastion+vpn instance to ease interactions with the services deployed within your VPC.
-</p>
-
-<p>
-Then we can boot the Swarmer instances on the proper subnets.
-</p>
-
-<p>
-We provide scripts to allow different kind of setups. Feel free to customize them to better suit your needs.
-</p>
-
-<p>
-IMPORTANT: All of these actions will be performed by terraform. As your setup on AWS could be more than just a "dev environment", terraform store the state of our infrastructure in S3, allowing multiple users to retrieve/update the infrastructure.
-</p>
-</div>
-
-<div id="outline-container-orgheadline20" class="outline-4">
-<h4 id="orgheadline20"><span class="section-number-4">3.3.1</span> Init S3, Keypair and AMIs</h4>
-<div class="outline-text-4" id="text-3-3-1">
-<p>
-A script is provided to initialize the creation of the required resources: 
-</p>
-
-<ul class="org-ul">
-<li>a s3 bucket</li>
-<li>a keypair</li>
-<li>the amis</li>
-</ul>
-
-<p>
-The keypair will be encrypted with gpg and uploaded to the s3 bucket, so that it can be shared with other members of a team.
-</p>
-
-<p>
-We will show an example using the docker swarmer image.
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash">docker run --rm -it \ 
-  -v $(pwd):/tmp/output \
-  -e AWS_SECRET_ACCESS_KEY="[AWS_SECRET_ACCESS_KEY]" \
-  -e AWS_ACCESS_KEY_ID="[AWS_ACCESS_KEY_ID]" \
-  -e AWS_DEFAULT_REGION="[AWS_REGION]" \
-  -e STACK_NAME="myswarmer" \
-  -e AWS_ACCOUNT="[AWS_ACCOUNT]" \
-  -e PASSPHRASE="[a passphrase]"
-   swarmer terraform/aws/scripts/dc-init.sh -A init
-...
-1458667162,,ui,say,==&gt; aws: No volumes to clean up%!(PACKER_COMMA) skipping
-1458667162,,ui,say,==&gt; aws: Deleting temporary security group...
-1458667163,,ui,say,==&gt; aws: Deleting temporary keypair...
-1458667163,,ui,say,Build 'aws' finished.
-1458667163,,ui,say,\n==&gt; Builds finished. The artifacts of successful builds are:
-1458667163,aws,artifact-count,1
-1458667163,aws,artifact,0,builder-id,mitchellh.amazonebs
-1458667163,aws,artifact,0,id,eu-west-1:ami-c79e1ab4
-1458667163,aws,artifact,0,string,AMIs were created:\n\neu-west-1: ami-c79e1ab4
-1458667163,aws,artifact,0,files-count,0
-1458667163,aws,artifact,0,end
-1458667163,,ui,say,--&gt; aws: AMIs were created:\n\neu-west-1: ami-c79e1ab4
-make: Leaving directory '/src/packer/swarmer'
-</pre>
-</div>
-
-<p>
-IMPORTANT! As this step builds severals AMIs it can be pretty long. Coffee time.
-</p>
-</div>
-</div>
-
-
-<div id="outline-container-orgheadline21" class="outline-4">
-<h4 id="orgheadline21"><span class="section-number-4">3.3.2</span> Create the VPC</h4>
-<div class="outline-text-4" id="text-3-3-2">
-<p>
-A script is provided to create a VPC and all its associated resources.
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash">docker run --rm -it \ 
-  -e AWS_SECRET_ACCESS_KEY="[AWS_SECRET_ACCESS_KEY]" \
-  -e AWS_ACCESS_KEY_ID="[AWS_ACCESS_KEY_ID]" \
-  -e AWS_DEFAULT_REGION="[AWS_REGION]" \
-  -e STACK_NAME="myswarmer" \
-  -e AWS_ACCOUNT="[AWS_ACCOUNT]" \
-   swarmer terraform/aws/scripts/dc-multi-az-vpc.sh bootstrap
-...
-
-Apply complete! Resources: 30 added, 0 changed, 0 destroyed.
-
-The state of your infrastructure has been saved to the path
-below. This state is required to modify and destroy your
-infrastructure, so keep it safe. To inspect the complete state
-use the `terraform show` command.
-
-State path: .terraform/terraform.tfstate
-
-Outputs:
-
-  availability_zones        = eu-west-1a,eu-west-1b
-  bastion_ip                = 53.40.250.156
-  dns_domain_name           = myswarmer
-  dns_zone_id               = Z31337FAKAECW63O
-  key_name                  = myswarmer-keypair
-  security_group            = sg-2c2d3048
-  subnet_id_zone_a          = subnet-3f0ff45b
-  subnet_id_zone_b          = subnet-ebfc1f9d
-  subnet_ids                = subnet-3f0ff45b,subnet-ebfc1f9d
-  swarmer_access_key_id     = FAKEI7WKFAKEIUIFAKE
-  swarmer_access_key_secret = +FAK+FAKEFAKES75Eb5FAKE5LSZFAKE5nq1ypOGFAKE
-  vpc_id                    = vpc-aa2e3ecf
-</pre>
-</div>
-
-<p>
-This step takes normally less than 5 minutes.
-</p>
-</div>
-</div>
-
-
-<div id="outline-container-orgheadline22" class="outline-4">
-<h4 id="orgheadline22"><span class="section-number-4">3.3.3</span> Create the Swarm!</h4>
-<div class="outline-text-4" id="text-3-3-3">
-<p>
-Now that you have a proper VPC bootstrapped, you can deploy your swarm instance into it. 
-</p>
-
-<p>
-You have several choices of deployment :
-</p>
-
-<ul class="org-ul">
-<li>separated consul servers from swarm nodes</li>
-<li>separated swarm managers from swarm nodes</li>
-<li>single/multi availability zones deployment</li>
-</ul>
-
-<p>
-It is commonly accepted that, for small clusters (up to 10 nodes), you can colocate your swarm managers with your swarm agents and have as many managers as agents.
-Yet, it is not recommanded to have a lot of consul servers. From 3 to 6 is a good choice for reliability. More and the gossip protocol and sync process will start downgrading performances.
-</p>
-
-<p>
-Here we will boot a 6 nodes swarm clusters spanned on 2 availability zones, with one consul server by swarm node. That way, if an avaibility zone goes down, consul still has 3 nodes to make a quorum for master election.
-</p>
-
-<p>
-Terraform is the tool used to bootstrap the instance. Also several building blocks are available to help you quickly bootstrap a cluster. Some example bash scripts demonstrate how to use those terraform building blocks. Feel free to add/create/modify them to get the infrastructure that better suits your requirements.
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash">docker run --rm -it \ 
-  -e AWS_SECRET_ACCESS_KEY="[AWS_SECRET_ACCESS_KEY]" \
-  -e AWS_ACCESS_KEY_ID="[AWS_ACCESS_KEY_ID]" \
-  -e AWS_DEFAULT_REGION="[AWS_REGION]" \
-  -e STACK_NAME="myswarmer" \
-  -e AWS_ACCOUNT="[AWS_ACCOUNT]" \
-   swarmer terraform/aws/scripts/dc-multi-az-simple-swarm.sh bootstrap
-...
-
-Apply complete! Resources: 6 added, 0 changed, 0 destroyed.
-
-The state of your infrastructure has been saved to the path
-below. This state is required to modify and destroy your
-infrastructure, so keep it safe. To inspect the complete state
-use the `terraform show` command.
-
-State path: .terraform/terraform.tfstate
-</pre>
-</div>
-</div>
-</div>
-
-
-<div id="outline-container-orgheadline27" class="outline-4">
-<h4 id="orgheadline27"><span class="section-number-4">3.3.4</span> Configure your access to your swarm cluster</h4>
-<div class="outline-text-4" id="text-3-3-4">
-<p>
-Your cluster is located on a private subnet with no public facing IP. To be able to target it or simply connect to it, you have two options:
-</p>
-
-<ul class="org-ul">
-<li>through ssh tunnels</li>
-<li>through the VPN</li>
-</ul>
-</div>
-
-<ol class="org-ol"><li><a id="orgheadline23"></a>SSH tunnels<br  /><div class="outline-text-5" id="text-3-3-4-1">
-<p>
-This section describes how to establish ssh connections or tunnels through the bastion instance of the VPC. As it can be quite an annoying step, we've made a simple script which generates an ssh config and download the private key that you'll have to copy in your local ssh directory ( probably ~/.ssh ).
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash">docker run --rm -it \ 
-  -e AWS_SECRET_ACCESS_KEY="[AWS_SECRET_ACCESS_KEY]" \
-  -e AWS_ACCESS_KEY_ID="[AWS_ACCESS_KEY_ID]" \
-  -e AWS_DEFAULT_REGION="[AWS_REGION]" \
-  -e STACK_NAME="myswarmer" \
-  -e AWS_ACCOUNT="[AWS_ACCOUNT]" \
-  -e PASSPHRASE="[a passphrase]" \
-  -v /tmp:/output
-   swarmer terraform/aws/scripts/dc-multi-az-simple-swarm.sh config-ssh 
-...
-cat /tmp/config &gt;&gt; ~/.ssh/config
-#the docker container generates files that belong to the root user
-sudo cp /tmp/myswarmer.key ~/.ssh
-sudo chown $USER ~/.ssh/myswarmer.key
-cat ~/.ssh/config
-...
-Host myswarmer-swarm-zone-a-swarm_manager-0
-   HostName 10.233.1.205
-   IdentityFile ~/.ssh/myswarmer.key
-   ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
-
-Host myswarmer-swarm-zone-a-swarm_manager-1
-   HostName 10.233.1.254
-   IdentityFile ~/.ssh/myswarmer.key
-   ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
-
-Host myswarmer-swarm-zone-a-swarm_manager-2
-   HostName 10.233.1.253
-   IdentityFile ~/.ssh/myswarmer.key
-   ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
-
-Host myswarmer-swarm-zone-b-swarm_manager-0
-   HostName 10.233.3.8
-   IdentityFile ~/.ssh/myswarmer.key
-   ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
-
-Host myswarmer-swarm-zone-b-swarm_manager-1
-   HostName 10.233.3.54
-   IdentityFile ~/.ssh/myswarmer.key
-   ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
-
-Host myswarmer-swarm-zone-b-swarm_manager-2
-   HostName 10.233.3.45
-   IdentityFile ~/.ssh/myswarmer.key
-   ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
-
-Host "10.233.*"
-   IdentityFile ~/.ssh/myswarmer.key
-   ProxyCommand ssh -l ec2-user -i ~/.ssh/myswarmer.key -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null "52.48.24.59" nc %h %p
-</pre>
-</div>
-
-<p>
-You will notice that there is one entry per host, plus one global entry matching every ip beginning with 10.233.*. This uncommon /16 subnet has been chosen to avoid IP overlapping with your privates subnets. It can be configured if it doesn't suits you. See <a href="terraform/aws/vpc/variables.tf">terraform/aws/vpc/variables.tf</a>. 
-</p>
-
-<p>
-IMPORTANT! Only the hosts that are "up" are added to the config. By "up", we mean that they have at least joined the consul cluster. If you have no host in the config, retrieve the privates ips of your instances through the aws console and ssh into them using their private IP; the global "10.233.*" is dedicated to this.
-</p>
-
-<p>
-You'll also notice that each entry refers to a "myswarmer.key". This is the private ssh key that has been generated during the init phase and uploaded to s3.
-</p>
-</div></li>
-
-
-<li><a id="orgheadline24"></a>VPN access<br  /><div class="outline-text-5" id="text-3-3-4-2">
-<p>
-This section describes how to establish a vpn connection with openvpn. You need to have a proper install of openvpn on your box. You also need the private ssh key. Refer to the previous section to know how to retrieve it.
-</p>
-
-<p>
-The first thing you need is to generate your VPN keys and retrieve the openvpn configuration.
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash">$ # the ip of the bastion is referred in the generated ssh config, and also 
-$ ssh myswarmer-bastion /opt/ovpn-client-config.sh MYNAME &gt; ~/MYNAME.myswarmer-ovpn.conf
-Generating a 2048 bit RSA private key
-..........................+++
-................+++
-writing new private key to '/etc/openvpn/pki/private/MYNAME.key.XXXXigMGgg'
------
-Using configuration from /usr/share/easy-rsa/openssl-1.0.cnf
-Check that the request matches the signature
-Signature ok
-The Subject's Distinguished Name is as follows
-commonName            :ASN.1 12:'MYNAME'
-Certificate is to be certified until Apr  6 15:59:42 2026 GMT (3650 days)
-
-Write out database with 1 new entries
-Data Base Updated
-
-$ sudo openvpn ~/MYNAME.myswarmer-ovpn.conf
-...
-Fri Apr  8 17:58:48 2016 TLS Error: TLS handshake failed
-Fri Apr  8 17:58:48 2016 SIGUSR1[soft,tls-error] received, process restarting
-Fri Apr  8 17:58:50 2016 WARNING: Your certificate is not yet valid!
-Fri Apr  8 17:58:50 2016 Control Channel Authentication: tls-auth using INLINE static key file
-Fri Apr  8 17:58:50 2016 UDPv4 link local: [undef]
-Fri Apr  8 17:58:50 2016 UDPv4 link remote: [AF_INET]52.48.31.60:1194
-Fri Apr  8 17:58:50 2016 [52.48.31.60] Peer Connection Initiated with [AF_INET]52.48.31.60:1194
-Fri Apr  8 17:58:52 2016 TUN/TAP device tun0 opened
-Fri Apr  8 17:58:52 2016 do_ifconfig, tt-&gt;ipv6=0, tt-&gt;did_ifconfig_ipv6_setup=0
-Fri Apr  8 17:58:52 2016 /usr/bin/ip link set dev tun0 up mtu 1500
-Fri Apr  8 17:58:52 2016 /usr/bin/ip addr add dev tun0 local 192.168.255.6 peer 192.168.255.5
-Fri Apr  8 17:58:52 2016 Initialization Sequence Completed
-
-$ # get the internal ip of one of the members of the cluster and try to get consul info:
-
-$ curl 10.233.1.145:8500/v1/catalog
-{"consul":[],"swarm-4000":[]}%
-$ # BINGO!
-</pre>
-</div>
-</div></li>
-
-
-
-<li><a id="orgheadline25"></a>SSH to a node<br  /><div class="outline-text-5" id="text-3-3-4-3">
-<p>
-You can ssh to a swarm with a simple ssh command:
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash">ssh core@myswarmer-swarm-zone-a-swarm_manager-0
-CoreOS alpha (991.0.0)
-core@ip-172-233-3-45 ~ $ 
-core@ip-172-233-3-45 ~ $ docker ps
-CONTAINER ID        IMAGE                           COMMAND                  CREATED             STATUS              PORTS                                   NAMES
-f08eb5612b51        gliderlabs/registrator:latest   "/bin/registrator -in"   27 minutes ago      Up 27 minutes                                               registrator
-666dcc033b8f        swarm:latest                    "/swarm manage -H :40"   27 minutes ago      Up 27 minutes       2375/tcp, 172.233.3.45:4000-&gt;4000/tcp   swarm-manager
-14dc3ed89cb6        swarm:latest                    "/swarm join --advert"   27 minutes ago      Up 27 minutes       2375/tcp                                swarm-agent
-
-core@ip-172-233-3-45 ~ $ ...
-</pre>
-</div>
-</div></li>
-
-
-<li><a id="orgheadline26"></a>Create an ssh tunnel to swarm<br  /><div class="outline-text-5" id="text-3-3-4-4">
-<p>
-If you don't want to use the VPN, you can create an ssh tunnel to ease the deployment of a container from your box
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash"># you have to replace the 172.233.1.205 ip with the private ip of the node you selected
- ssh -fqnNT -L localhost:4000:172.233.1.205:4000 core@myswarmer-swarm-zone-a-swarm_manager-0
-
-export DOCKER_HOST=localhost:4000
-docker info
-Containers: 18
- Running: 18
- Paused: 0
- Stopped: 0
-Images: 18
-Server Version: swarm/1.1.3
-Role: replica
-Primary: 172.233.3.8:4000
-Strategy: spread
-Filters: health, port, dependency, affinity, constraint
-Nodes: 6
- ip-172-233-1-205.eu-west-1.compute.internal: 172.233.1.205:2375
-  └ Status: Healthy
-  └ Containers: 3
-  └ Reserved CPUs: 0 / 2
-  └ Reserved Memory: 0 B / 8.19 GiB
-  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
-  └ Error: (none)
-  └ UpdatedAt: 2016-03-24T10:57:49Z
- ip-172-233-1-253.eu-west-1.compute.internal: 172.233.1.253:2375
-  └ Status: Healthy
-  └ Containers: 3
-  └ Reserved CPUs: 0 / 2
-  └ Reserved Memory: 0 B / 8.19 GiB
-  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
-  └ Error: (none)
-  └ UpdatedAt: 2016-03-24T10:57:37Z
- ip-172-233-1-254.eu-west-1.compute.internal: 172.233.1.254:2375
-  └ Status: Healthy
-  └ Containers: 3
-  └ Reserved CPUs: 0 / 2
-  └ Reserved Memory: 0 B / 8.19 GiB
-  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
-  └ Error: (none)
-  └ UpdatedAt: 2016-03-24T10:57:45Z
- ip-172-233-3-8.eu-west-1.compute.internal: 172.233.3.8:2375
-  └ Status: Healthy
-  └ Containers: 3
-  └ Reserved CPUs: 0 / 2
-  └ Reserved Memory: 0 B / 8.19 GiB
-  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
-  └ Error: (none)
-  └ UpdatedAt: 2016-03-24T10:57:43Z
- ip-172-233-3-45.eu-west-1.compute.internal: 172.233.3.45:2375
-  └ Status: Healthy
-  └ Containers: 3
-  └ Reserved CPUs: 0 / 2
-  └ Reserved Memory: 0 B / 8.19 GiB
-  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
-  └ Error: (none)
-  └ UpdatedAt: 2016-03-24T10:57:26Z
- ip-172-233-3-54.eu-west-1.compute.internal: 172.233.3.54:2375
-  └ Status: Healthy
-  └ Containers: 3
-  └ Reserved CPUs: 0 / 2
-  └ Reserved Memory: 0 B / 8.19 GiB
-  └ Labels: executiondriver=native-0.2, kernelversion=4.4.6-coreos, operatingsystem=CoreOS 991.0.0 (Coeur Rouge), storagedriver=overlay
-  └ Error: (none)
-  └ UpdatedAt: 2016-03-24T10:57:42Z
-Plugins:
- Volume:
- Network:
-Kernel Version: 4.4.6-coreos
-Operating System: linux
-Architecture: amd64
-CPUs: 12
-Total Memory: 49.14 GiB
-Name: a540944837d6
-</pre>
-</div>
-</div></li></ol>
-</div>
-
-
-
-
-<div id="outline-container-orgheadline28" class="outline-4">
-<h4 id="orgheadline28"><span class="section-number-4">3.3.5</span> Destroy the cluster and the vpc</h4>
-<div class="outline-text-4" id="text-3-3-5">
-<p>
-You can destroy the resources with the same scripts used to terraform by simply replacing the "bootstrap" command with "destroy"
-</p>
-</div>
-</div>
-
-
-<div id="outline-container-orgheadline29" class="outline-4">
-<h4 id="orgheadline29"><span class="section-number-4">3.3.6</span> Debugging</h4>
-<div class="outline-text-4" id="text-3-3-6">
-<p>
-The best way to debug the system is to run the docker tool container with the proper env vars set, and attached to your src volume. You still have to get familiar with terraform, which is not the purpose of this guide.
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash">docker run --rm -it \ 
-  -v $(pwd):/src
-  -e AWS_SECRET_ACCESS_KEY="[AWS_SECRET_ACCESS_KEY]" \
-  -e AWS_ACCESS_KEY_ID="[AWS_ACCESS_KEY_ID]" \
-  -e AWS_DEFAULT_REGION="[AWS_REGION]" \
-  -e STACK_NAME="myswarmer" \
-  -e AWS_ACCOUNT="[AWS_ACCOUNT]" \
-   swarmer 
-bash-4.3# ...
-</pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-
-
-<div id="outline-container-orgheadline37" class="outline-2">
-<h2 id="orgheadline37"><span class="section-number-2">4</span> Play with your swarm cluster</h2>
-<div class="outline-text-2" id="text-4">
-<p>
-Now we can play with swarm.
-</p>
-</div>
-
-<div id="outline-container-orgheadline32" class="outline-3">
-<h3 id="orgheadline32"><span class="section-number-3">4.1</span> Configure DNS resolution</h3>
-<div class="outline-text-3" id="text-4-1">
-<p>
-To resolv names, you have to configure a dns service that will forward the requests to consul. A docker-compose file is provided (<a href="dns-proxy-compose.yml">dns-proxy-compose.yml</a>).
-</p>
-
-<p>
-This compose file starts a dnsmasq service with net=host that will target $CONSULIP consul agent. This only works with vagrant or when the VPN is setup.
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash">$ # check your /etc/resolv.conf file
-$ cat /etc/resolv.conf
-nameserver 127.0.0.1
-...
-$ # eventually run the following command for your next boot
-$ sudo su
-root $ echo "nameserver 127.0.0.1" &gt; /etc/resolv.conf.head
-root $ exit
-$ export CONSULIP=192.168.101.101
-$ docker-compose -d -f dns-proxy-compose.yml up -d
-$ curl registry.service.consul:5000/v2/_catalog
-{"repositories":[]}
-$ ...
-</pre>
-</div>
-</div>
-</div>
-
-
-<div id="outline-container-orgheadline33" class="outline-3">
-<h3 id="orgheadline33"><span class="section-number-3">4.2</span> Using the swarm cluster</h3>
-<div class="outline-text-3" id="text-4-2">
-<p>
-You can now use your swarm cluster to run docker containers as simply as you would do to run a container on your local docker engine. All you have to do is 
-target the IP of one of your swarm node. 
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash">export DOCKER_HOST=swarm-4000.service.consul:4000
-docker pull alpine
-docker run --rm -it alpine /bin/sh
-/ # ...
-</pre>
-</div>
-</div>
-</div>
-
-<div id="outline-container-orgheadline34" class="outline-3">
-<h3 id="orgheadline34"><span class="section-number-3">4.3</span> Using a custom private registry with vagrant</h3>
-<div class="outline-text-3" id="text-4-3">
-<p>
-If you inspect the docker engines configuration on each swarm node, you'll notice that an insecure registry targeting your private IP has been added.
-</p>
-
-<p>
-If you start a local docker registry on your box, you'll ease and fasten the download of your private docker images.
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash">export DOCKER_HOST=
-export MYIP="$(ip route | grep default | sed 's/.*src \([0-9\.]*\).*$/\1/g')"
-docker run -d --net host --name registry registry:2
-docker tag myimage:latest $MYIP:5000/myimage:latest
-docker push $MYIP:5000/myimage:latest
-export DOCKER_HOST=192.168.101.101:4000
-docker pull $MYIP:5000/myimage:latest
-swarm-01: Pulling 192.168.0.43:5000/myimage:latest...
-swarm-03: Pulling 192.168.0.43:5000/myimage:latest... : downloaded
-swarm-02: Pulling 192.168.0.43:5000/myimage:latest... : downloaded
-...
-docker run --rm -it myimage:latest
-...
-</pre>
-</div>
-</div>
-</div>
-
-
-<div id="outline-container-orgheadline35" class="outline-3">
-<h3 id="orgheadline35"><span class="section-number-3">4.4</span> Deploy a docker container</h3>
-<div class="outline-text-3" id="text-4-4">
-<p>
-Quite simple&#x2026; ( don't forget to launch the ssh tunnel if you don't use VPN )
-</p>
-
-<div class="org-src-container">
-
-<pre class="src src-bash">export DOCKER_HOST=swarm-4000.service.consul:4000
-docker run --rm -it alpine /bin/sh
-/ # echo "let's play with docker swarm!"
-</pre>
-</div>
-</div>
-</div>
-
-<div id="outline-container-orgheadline36" class="outline-3">
-<h3 id="orgheadline36"><span class="section-number-3">4.5</span> Using the private registry</h3>
-<div class="outline-text-3" id="text-4-5">
-<p>
-The private insecure registry which is automatically started on the swarm cluster is registered on the "registry.service.consul" name. So you have to tag &amp; push docker images with this name if you want the nodes to be able to download your images. 
-</p>
-</div>
-</div>
-</div>
-
-
-<div id="outline-container-orgheadline47" class="outline-2">
-<h2 id="orgheadline47"><span class="section-number-2">5</span> Considerations &amp; Roadmap</h2>
-<div class="outline-text-2" id="text-5">
-</div><div id="outline-container-orgheadline38" class="outline-3">
-<h3 id="orgheadline38"><span class="section-number-3">5.1</span> CoreOS alpha channel</h3>
-<div class="outline-text-3" id="text-5-1">
+<div id="outline-container-orgheadline22" class="outline-2">
+<h2 id="orgheadline22"><span class="section-number-2">6</span> Considerations &amp; Roadmap</h2>
+<div class="outline-text-2" id="text-6">
+</div><div id="outline-container-orgheadline13" class="outline-3">
+<h3 id="orgheadline13"><span class="section-number-3">6.1</span> CoreOS alpha channel</h3>
+<div class="outline-text-3" id="text-6-1">
 <p>
 Yes. Because by now, it's the only coreos version that supports docker 1.10.
 </p>
@@ -1183,9 +425,9 @@ Yes. Because by now, it's the only coreos version that supports docker 1.10.
 </div>
 
 
-<div id="outline-container-orgheadline39" class="outline-3">
-<h3 id="orgheadline39"><span class="section-number-3">5.2</span> Use docker-machine</h3>
-<div class="outline-text-3" id="text-5-2">
+<div id="outline-container-orgheadline14" class="outline-3">
+<h3 id="orgheadline14"><span class="section-number-3">6.2</span> Use docker-machine</h3>
+<div class="outline-text-3" id="text-6-2">
 <p>
 We may later consider using docker-machine to install &amp; configure the swarm agents. We would then benefit proper &amp; secured configurations.
 </p>
@@ -1193,9 +435,9 @@ We may later consider using docker-machine to install &amp; configure the swarm 
 </div>
 
 
-<div id="outline-container-orgheadline40" class="outline-3">
-<h3 id="orgheadline40"><span class="section-number-3">5.3</span> Run consul and swarm services as docker containers</h3>
-<div class="outline-text-3" id="text-5-3">
+<div id="outline-container-orgheadline15" class="outline-3">
+<h3 id="orgheadline15"><span class="section-number-3">6.3</span> Run consul and swarm services as docker containers</h3>
+<div class="outline-text-3" id="text-6-3">
 <p>
 There are some caveats running the system services as docker containers, even on coreos. The main problem is the process supervision with systemd, as full described in this <a href="https://lwn.net/Articles/676831/">article</a>. That said, the coreos rocket container engine could be considered as a suitable alternative.
 </p>
@@ -1203,18 +445,18 @@ There are some caveats running the system services as docker containers, even on
 </div>
 
 
-<div id="outline-container-orgheadline41" class="outline-3">
-<h3 id="orgheadline41"><span class="section-number-3">5.4</span> Monitoring</h3>
-<div class="outline-text-3" id="text-5-4">
+<div id="outline-container-orgheadline16" class="outline-3">
+<h3 id="orgheadline16"><span class="section-number-3">6.4</span> Monitoring</h3>
+<div class="outline-text-3" id="text-6-4">
 <p>
 There is no monitoring yet, and no centralized log system configured either.v
 </p>
 </div>
 </div>
 
-<div id="outline-container-orgheadline42" class="outline-3">
-<h3 id="orgheadline42"><span class="section-number-3">5.5</span> Server.yml to bootstrap AWS</h3>
-<div class="outline-text-3" id="text-5-5">
+<div id="outline-container-orgheadline17" class="outline-3">
+<h3 id="orgheadline17"><span class="section-number-3">6.5</span> Server.yml to bootstrap AWS</h3>
+<div class="outline-text-3" id="text-6-5">
 <p>
 It would be nice if the server.yml could be used as input to terraform an AWS setup.
 </p>
@@ -1222,28 +464,28 @@ It would be nice if the server.yml could be used as input to terraform an AWS se
 </div>
 
 
-<div id="outline-container-orgheadline43" class="outline-3">
-<h3 id="orgheadline43"><span class="section-number-3">5.6</span> Running on GCE</h3>
+<div id="outline-container-orgheadline18" class="outline-3">
+<h3 id="orgheadline18"><span class="section-number-3">6.6</span> Running on GCE</h3>
 </div>
 
 
-<div id="outline-container-orgheadline44" class="outline-3">
-<h3 id="orgheadline44"><span class="section-number-3">5.7</span> Running on Azure</h3>
+<div id="outline-container-orgheadline19" class="outline-3">
+<h3 id="orgheadline19"><span class="section-number-3">6.7</span> Running on Azure</h3>
 </div>
 
 
-<div id="outline-container-orgheadline45" class="outline-3">
-<h3 id="orgheadline45"><span class="section-number-3">5.8</span> Running on premise</h3>
+<div id="outline-container-orgheadline20" class="outline-3">
+<h3 id="orgheadline20"><span class="section-number-3">6.8</span> Running on premise</h3>
 </div>
 
 
-<div id="outline-container-orgheadline46" class="outline-3">
-<h3 id="orgheadline46"><span class="section-number-3">5.9</span> How to do rolling upgrades of the infrastructure with terraform&#x2026;?</h3>
+<div id="outline-container-orgheadline21" class="outline-3">
+<h3 id="orgheadline21"><span class="section-number-3">6.9</span> How to do rolling upgrades of the infrastructure with terraform&#x2026;?</h3>
 </div>
 </div>
 </div>
 <div id="postamble" class="status">
-<p class="date">Created: 2016-04-15 ven. 13:45</p>
+<p class="date">Created: 2016-04-25 lun. 11:35</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

@@ -1,0 +1,11 @@
+[Unit]
+Description=Openvpn Service Data
+Requires=docker.service
+Before=openvpn.service
+After=system-config.target
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/environment
+ExecStart=/opt/init-ovpndata.sh
+[Install]
+WantedBy=default.target

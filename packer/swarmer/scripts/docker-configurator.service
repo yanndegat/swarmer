@@ -1,0 +1,8 @@
+[Unit]
+Description=Docker Engine Configurator
+PartOf=swarmer.service
+Wants=docker.service
+Before=docker.service
+[Service]
+Type=oneshot
+ExecStart=/opt/swarmer/docker-configurator

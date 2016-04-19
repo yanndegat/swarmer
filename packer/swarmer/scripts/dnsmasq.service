@@ -1,7 +1,8 @@
 [Unit]
 Description=Dnsmasq
 PartOf=consul.service
-After=consul.service
+After=docker.service consul.service
+Requires=docker.service
 [Service]
 EnvironmentFile=-/etc/environment
 Restart=on-failure
@@ -21,5 +22,3 @@ ExecStartPost=/bin/sh -c '\
   systemctl restart systemd-resolved;'
 ExecStop=/usr/bin/docker stop dnsmasq
 ExecStopPost=/bin/sh -c 'rm /etc/systemd/resolved.conf.d/00-consul-dns.conf && systemctl restart systemd-resolved'
-[Install]
-WantedBy=default.target

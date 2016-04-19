@@ -1,20 +1,17 @@
 Vagrant.require_version '>= 1.6.0'
-ENV['VAGRANT_DEFAULT_PROVIDER'] = 'virtualbox'
 
-require_relative 'vagrant/change_host_name.rb'
-require_relative 'vagrant/configure_networks.rb'
-require_relative 'vagrant/base_mac.rb'
-
-# Require 'yaml', 'fileutils', and 'erb' modules
 require 'yaml'
-require 'fileutils'
-require 'erb'
+require 'tempfile'
 
-spec = YAML.load_file(File.join(File.dirname(__FILE__), 'servers.yml'))
+server_yaml_path = ENV["SERVER_YML"] || "./servers.yml"
+
+spec = YAML.load_file(File.join(File.dirname(__FILE__), server_yaml_path ))
+
+box = spec['box'] || "yanndegat/swarmer"
 admin_network = spec['admin_network']
-consul_joinip = spec['consul_joinip']
 docker_registry = spec['docker_registry']
 servers = spec['servers']
+consul_joinip = servers.first['priv_ip']
 
 # Create and configure the VMs
 Vagrant.configure("2") do |config|
@@ -29,13 +26,26 @@ Vagrant.configure("2") do |config|
   end
 
   servers.each do |server|
+    userdata = <<EOF
+#cloud-config
+ssh_authorized_keys:
+  - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+write_files:
+  - path: "/etc/swarmer/swarmer.conf"
+    permissions: "0644"
+    owner: "root"
+    content: |
+      export JOINIPADDR=#{consul_joinip}
+      export CLUSTER_SIZE=#{servers.size}
+      export CONSUL_OPTS="-ui -node=#{server['name']} -dc=vagrant"
+      export ADMIN_NETWORK="#{admin_network}"
+      export PUBLIC_NETWORK="#{admin_network}"
+      export SWARM_MODE="both"
+EOF
 
-    # create cloud-init device
-    cloudinit_img=%x[INSTANCE_ID=#{server['name']} ADMIN_NETWORK=#{admin_network} INSTANCE_IP=#{server['priv_ip']} JOINIPADDR=#{consul_joinip} DOCKER_REGISTRY=#{docker_registry} CLUSTER_SIZE=#{servers.size} vagrant/cloud-init-img.sh 2>/dev/null]
-
-    if $?.exitstatus != 0
-      abort("could not create cloudconfig.")
-    end
+    userdata_file = Tempfile.new(server['name'])
+    userdata_file.write userdata
+    userdata_file.close
 
     config.vm.define server['name'] do |srv|
       srv.vm.provider :virtualbox do |v|
@@ -44,16 +54,15 @@ Vagrant.configure("2") do |config|
       end
       srv.vm.synced_folder ".", "/vagrant", disabled: true
       srv.vm.hostname = server['name']
-      srv.vm.box = server['box']
+      srv.vm.box = box
       # Don't check for box updates
       srv.vm.box_check_update = false
 
       # Assign an additional static private network
       srv.vm.network 'private_network', ip: server['priv_ip']
 
-      srv.vm.provider :virtualbox do |v|
-        v.customize ['storageattach', :id, '--storagectl', 'SATA Controller', '--port', 1, '--device', 0, '--type', 'hdd', '--medium', cloudinit_img]
-      end
+      srv.vm.provision :file, :source => userdata_file.path(), :destination => "/tmp/vagrantfile-user-data"
+      srv.vm.provision :shell, :inline => "mv /tmp/vagrantfile-user-data /var/lib/coreos-vagrant/", :privileged => true
     end
   end
 end

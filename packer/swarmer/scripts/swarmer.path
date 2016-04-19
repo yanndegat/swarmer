@@ -1,0 +1,9 @@
+[Unit]
+Description=Swarmer Configuration Path
+
+[Path]
+PathExists=/etc/swarmer/swarmer.conf
+Unit=swarmer.service
+
+[Install]
+WantedBy=default.target

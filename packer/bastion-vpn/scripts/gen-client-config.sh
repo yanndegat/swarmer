@@ -23,5 +23,5 @@ if ! exists; then
     exit 1
 fi
 
-docker run --volumes-from $OVPN_DATA --rm -it kylemanna/openvpn easyrsa build-client-full $1 nopass
-docker run --volumes-from $OVPN_DATA --rm kylemanna/openvpn ovpn_getclient $1
+docker run --volumes-from $OVPN_DATA --rm -it kylemanna/openvpn:latest easyrsa build-client-full $1 nopass
+docker run --volumes-from $OVPN_DATA --rm kylemanna/openvpn:latest ovpn_getclient $1

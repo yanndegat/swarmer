@@ -4,8 +4,8 @@ SWARM_MODE="manager"
 SWARM_VERSION="latest"
 ADMIN_NETWORK="default"
 
-if [[ -f "/etc/swarm/swarm.conf" ]]; then
-    . /etc/swarm/swarm.conf
+if [[ -f "/etc/swarmer/swarmer.conf" ]]; then
+    . /etc/swarmer/swarmer.conf
 fi
 
 case $SWARM_MODE in
@@ -84,15 +84,15 @@ genengineconf(){
         exit 1
     fi
 
-    if [[ ! -f /etc/docker.conf.d/60-swarm.conf ]]; then
-        cat > /etc/docker.conf.d/60-swarm.conf <<EOF
+    if [[ ! -f /etc/swarmer/docker.conf.d/60-swarm.conf ]]; then
+        cat > /etc/swarmer/docker.conf.d/60-swarm.conf <<EOF
 DOCKER_OPTS='$ENGINE_OPTS'
 EOF
     else
-        source /etc/docker.conf.d/60-swarm.conf
+        source /etc/swarmer/docker.conf.d/60-swarm.conf
         if [[ $DOCKER_OPTS != $ENGINE_OPTS ]]; then
             logger -t "$SWARM_CONTAINER_NAME" "overwrite swarm docker engine opts"
-            cat > /etc/docker.conf.d/60-swarm.conf <<EOF
+            cat > /etc/swarmer/docker.conf.d/60-swarm.conf <<EOF
 DOCKER_OPTS='$ENGINE_OPTS'
 EOF
         fi
@@ -101,8 +101,8 @@ EOF
 
 removeengineconf(){
     logger -t "$SWARM_CONTAINER_NAME" "removes swarm docker engine opts"
-    if [[ -f /etc/docker.conf.d/60-swarm.conf ]]; then
-        rm /etc/docker.conf.d/60-swarm.conf
+    if [[ -f /etc/swarmer/docker.conf.d/60-swarm.conf ]]; then
+        rm /etc/swarmer/docker.conf.d/60-swarm.conf
     fi
 }
 

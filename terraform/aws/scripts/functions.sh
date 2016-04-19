@@ -5,15 +5,11 @@
 BASEDIR=$(readlink -f $(dirname $0))/..
 BUCKET_NAME="swarmer-${AWS_ACCOUNT}-${STACK_NAME}"
 PACKER_SWARMER_DIR=$BASEDIR/../../packer/swarmer
-PACKER_CONSUL_DIR=$BASEDIR/../../packer/consul
-PACKER_SWARM_DIR=$BASEDIR/../../packer/swarm
 PACKER_BASTION_VPN_DIR=$BASEDIR/../../packer/bastion-vpn
 OUTPUT_DIR=/tmp/output
 
 
-CONSUL_AMI_NAME="consul-coreos"
-SWARM_AMI_NAME="swarm-coreos"
-SWARMER_AMI_NAME="swarmer-coreos"
+SWARMER_AMI_NAME="swarmer"
 BASTION_VPN_AMI_NAME="bastion-vpn"
 
 INIT_AMIS=0
@@ -58,9 +54,9 @@ COMMANDS:
     s3bucket           Create the required s3bucket
     s3bucket           Create the required s3bucket
     keypair            Generates an ssh keypair
-    consul-ami         Builds the consul ami
-    swarm-ami          Builds the consul ami
-    swarmer-ami    Builds the swarmer ami
+
+    swarmer-ami        Builds the swarmer ami
+    bastion-ami        Builds the bastion ami
     all-amis           Builds all amis
 
 OPTIONS:
@@ -103,9 +99,7 @@ OPTIONS:
 Available Components:
     vpc               the aws vpc
     docker-registry   an insecure docker registry
-    consul            a consul cluster
-    swarm             a swarm cluster
-    swarmer           the swarmer vm
+    swarmer           a swarmer cluster
 EOF
 }
 
@@ -203,35 +197,23 @@ _lastamiid(){
     printf "$(_describe_private_amis_tsv)" | grep -i "$1" | head -1 | awk '{print $1}'
 }
 
-consul-ami(){
-   make -C $PACKER_CONSUL_DIR aws
-}
-swarm-ami(){
-   make -C $PACKER_SWARM_DIR aws CONSUL_AMI_ID=$(_lastamiid $CONSUL_AMI_NAME)
-}
 swarmer-ami(){
-   make -C $PACKER_SWARMER_DIR aws CONSUL_AMI_ID=$(_lastamiid $CONSUL_AMI_NAME)
+   make -C $PACKER_SWARMER_DIR aws
 }
+
 bastion-vpn-ami(){
    make -C $PACKER_BASTION_VPN_DIR
 }
 
-consul-ami-id(){
-   _lastamiid $CONSUL_AMI_NAME
-}
-swarm-ami-id(){
-   _lastamiid $SWARM_AMI_NAME
-}
 swarmer-ami-id(){
    _lastamiid $SWARMER_AMI_NAME
 }
+
 bastion-vpn-ami-id(){
    _lastamiid $BASTION_VPN_AMI_NAME
 }
 
 all-amis(){
-    consul-ami
-    swarm-ami
     swarmer-ami
     bastion-vpn-ami
 }
@@ -287,8 +269,6 @@ _terraform-gen-varfile(){
     cat << EOF
 aws_region = "$AWS_DEFAULT_REGION"
 stack_name = "$STACK_NAME"
-consul_ami = "$(_lastamiid $CONSUL_AMI_NAME)"
-swarm_ami = "$(_lastamiid $SWARM_AMI_NAME)"
 swarmer_ami = "$(_lastamiid $SWARMER_AMI_NAME)"
 EOF
 }

@@ -1,0 +1,9 @@
+[Unit]
+Description=Dockerized Registrator Service
+PartOf=swarmer.service
+After=docker.service consul.service
+Requires=docker.service consul.service
+[Service]
+Restart=always
+ExecStart=/opt/swarmer/registrator-manage start
+ExecStop=/opt/swarmer/registrator-manage stop

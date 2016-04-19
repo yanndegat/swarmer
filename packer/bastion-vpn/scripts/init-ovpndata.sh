@@ -21,6 +21,6 @@ fi
 
 if ! exists; then
     docker run -l $OVPN_DATA --name $OVPN_DATA -v /etc/openvpn busybox
-    docker run --volumes-from $OVPN_DATA --rm kylemanna/openvpn ovpn_genconfig -u udp://${COREOS_PUBLIC_IPV4} -p "route ${ADMIN_NETWORK%/*} 255.255.0.0"  -d -N
-    docker run --volumes-from $OVPN_DATA --rm kylemanna/openvpn /bin/bash -c "echo $STACK_NAME | ovpn_initpki nopass"
+    docker run --volumes-from $OVPN_DATA --rm kylemanna/openvpn:latest ovpn_genconfig -u udp://${COREOS_PUBLIC_IPV4} -p "route ${ADMIN_NETWORK%/*} 255.255.0.0"  -d -N
+    docker run --volumes-from $OVPN_DATA --rm kylemanna/openvpn:latest /bin/bash -c "echo $STACK_NAME | ovpn_initpki nopass"
 fi

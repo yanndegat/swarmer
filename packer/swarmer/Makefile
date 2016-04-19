@@ -1,24 +1,20 @@
-.PHONY: all dev aws gen-key-pair src-archive builds
+.PHONY: all aws vbox files/install.yml vagrant_private_key
+PACKER=$(shell (which packer-io || which packer.io || which packer)| tail -1)
 
-CONSUL_AMI_ID ?= "ami-81aa1af2"
+all: vbox
 
-all: dev
+dl-coreos-box:
+	@mkdir -p ./builds/coreos
+	@wget -O ./builds/coreos.box http://alpha.release.core-os.net/amd64-usr/current/coreos_production_vagrant.box
+	@tar -C ./builds/coreos -xzf ./builds/coreos.box
 
-gen-key-pair:
-	@./keypair.sh
+vagrant_private_key:
+	@wget --no-check-certificate -q -O ./vagrant_private_key 'https://raw.github.com/mitchellh/vagrant/master/keys/vagrant'
+	@chmod 0600 ./vagrant_private_key
 
-dev:
-	@rm -Rf builds/coreos/
-	@packer-io build -only=dev packer.json
+vbox: vagrant_private_key
+	@$(PACKER) build -only=vbox -force packer.json
+	@vagrant box add --force --name swarmer-coreos ./builds/swarmer-coreos.box
 
-iso: dev
-	@qemu-img convert -f qcow2 -O raw ./builds/coreos/swarm ./builds/coreos/swarm.iso
-
-builds:
-	@mkdir -p ./builds
-
-src-archive: builds
-	@(cd .. && git archive --format=tar master) | gzip > ./builds/src.tar.gz
-
-aws: src-archive
-	@packer-io build -only=aws -var "src=./builds/src.tar.gz" -var "aws-source-ami=$(CONSUL_AMI_ID)" packer.json
+aws:
+	@$(PACKER) build -only=aws packer.json

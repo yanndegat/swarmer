@@ -1,5 +1,5 @@
 resource "aws_instance" "swarm_node_first" {
-    ami = "${var.swarm_ami}"
+    ami = "${var.swarmer_ami}"
     instance_type = "${var.instance_type}"
     count = "${signum(var.count)}"
     key_name = "${var.key_name}"
@@ -18,12 +18,18 @@ coreos:
   update:
     reboot-strategy: off
 write_files:
-  - path: "/etc/swarm/swarm.conf"
+  - path: "/etc/swarmer/swarmer.conf"
     permissions: "0644"
     owner: "root"
     content: |
       export SWARM_MODE="${var.swarm_mode}"
       export ADMIN_NETWORK="${var.admin_network}"
+      export JOINIPADDR=${var.consul_joinaddress}
+      export CONSUL_MODE="${var.consul_mode}"
+      export CLUSTER_SIZE=${var.count}
+      export CONSUL_OPTS="$CONSUL_OPTS \
+      -node=${var.stack_name}-${var.name}-swarm_manager-0 \
+      -dc=${var.vpc_id}"
   - path: "/etc/docker/registry/config.yml"
     permissions: "0644"
     owner: "root"
@@ -54,23 +60,7 @@ write_files:
           enabled: true
           interval: 10s
           threshold: 3
-  - path: "/etc/registrator/registrator.conf"
-    permissions: "0644"
-    owner: "root"
-    content: |
-      export ADMIN_NETWORK="${var.admin_network}"
-  - path: "/etc/consul/consul.conf"
-    permissions: "0644"
-    owner: "root"
-    content: |
-      export JOINIPADDR=${var.consul_joinaddress}
-      export CONSUL_MODE="${var.consul_mode}"
-      export CLUSTER_SIZE=${var.count}
-      export ADMIN_NETWORK="${var.admin_network}"
-      export CONSUL_OPTS="$CONSUL_OPTS \
-      -node='${var.stack_name}-${var.name}-swarm_manager-0' \
-      -dc=${var.vpc_id}"
-  - path: "/etc/docker.conf.d/51-additional-docker-opts.conf"
+  - path: "/etc/swarmer/docker.conf.d/51-additional-docker-opts.conf"
     permissions: "0644"
     owner: "root"
     content: |
@@ -86,7 +76,7 @@ EOF
 }
 
 resource "aws_instance" "swarm_node_rest" {
-    ami = "${var.swarm_ami}"
+    ami = "${var.swarmer_ami}"
     count = "${var.count - signum(var.count)}"
     instance_type = "${var.instance_type}"
     count = 1
@@ -107,12 +97,18 @@ coreos:
   update:
     reboot-strategy: off
 write_files:
-  - path: "/etc/swarm/swarm.conf"
+  - path: "/etc/swarmer/swarmer.conf"
     permissions: "0644"
     owner: "root"
     content: |
       export SWARM_MODE="${var.swarm_mode}"
       export ADMIN_NETWORK="${var.admin_network}"
+      export JOINIPADDR=${aws_instance.swarm_node_first.private_ip}
+      export CONSUL_MODE="${var.consul_mode}"
+      export CLUSTER_SIZE=${var.count}
+      export CONSUL_OPTS="$CONSUL_OPTS \
+      -node=${var.stack_name}-${var.name}-swarm_manager-${count.index + 1} \
+      -dc=${var.vpc_id}"
   - path: "/etc/docker/registry/config.yml"
     permissions: "0644"
     owner: "root"
@@ -143,23 +139,7 @@ write_files:
           enabled: true
           interval: 10s
           threshold: 3
-  - path: "/etc/registrator/registrator.conf"
-    permissions: "0644"
-    owner: "root"
-    content: |
-      export ADMIN_NETWORK="${var.admin_network}"
-  - path: "/etc/consul/consul.conf"
-    permissions: "0644"
-    owner: "root"
-    content: |
-      export JOINIPADDR=${aws_instance.swarm_node_first.private_ip}
-      export CONSUL_MODE="${var.consul_mode}"
-      export CLUSTER_SIZE=${var.count}
-      export ADMIN_NETWORK="${var.admin_network}"
-      export CONSUL_OPTS="$CONSUL_OPTS \
-      -node='${var.stack_name}-${var.name}-swarm_manager-${count.index + 1}' \
-      -dc=${var.vpc_id}"
-  - path: "/etc/docker.conf.d/51-additional-docker-opts.conf"
+  - path: "/etc/swarmer/docker.conf.d/51-additional-docker-opts.conf"
     permissions: "0644"
     owner: "root"
     content: |

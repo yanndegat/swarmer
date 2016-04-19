@@ -1,6 +1,8 @@
 .PHONY: all aws
 
+PACKER = $(shell which packer.io | which packer | which packer-io)
+
 all: aws
 
 aws:
-	@packer-io build packer.json
+	@$(PACKER) build packer.json

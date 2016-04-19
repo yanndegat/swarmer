@@ -1,6 +1,6 @@
 #!/bin/bash
-if [ -f /etc/swarm/swarm.conf ]; then
-    source /etc/swarm/swarm.conf
+if [ -f /etc/swarmer/swarmer.conf ]; then
+    source /etc/swarmer/swarmer.conf
 fi
 
 BASEDIR="$(readlink -f $(dirname $0))/.."
@@ -20,7 +20,7 @@ registry-running(){
     [[ $? -eq 0 ]] && [[ ! -z $ID ]]
 }
 
-touch /etc/registry.conf
+touch /etc/swarmer/registry.conf
 
 export CONSUL_SESSION_ID=$(curl -XPUT "http://localhost:8500/v1/session/create" \
      -d '{"Name":"'$(hostname)'", "TTL": "120s", "LockDelay" : "120s"}' 2>/dev/null | jq '.ID' | sed 's/"//g' || exit 1)
