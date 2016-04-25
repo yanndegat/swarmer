@@ -1,5 +1,5 @@
 #+TITLE: Swarmer: a Swarm Cluster Maker
-#+OPTIONS: toc:3
+#+OPTIONS: toc:1
 #+SETUPFILE: theme.setup
  
 Note: you may prefer reading the [[file:README.html][README.html]] file in your browser. 

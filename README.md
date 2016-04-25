@@ -6,33 +6,8 @@
 <li><a href="#orgheadline2">2. Pre-Requisites</a></li>
 <li><a href="#orgheadline3">3. Quickstart</a></li>
 <li><a href="#orgheadline4">4. Getting Started on AWS</a></li>
-<li><a href="#orgheadline12">5. Play with your swarm cluster</a>
-<ul>
-<li><a href="#orgheadline5">5.1. Configure DNS resolution</a></li>
-<li><a href="#orgheadline6">5.2. Using the swarm cluster</a></li>
-<li><a href="#orgheadline7">5.3. Using the private registry</a></li>
-<li><a href="#orgheadline8">5.4. Run the examples</a></li>
-<li><a href="#orgheadline11">5.5. Swarmer Components</a>
-<ul>
-<li><a href="#orgheadline9">5.5.1. Architecture guidelines</a></li>
-<li><a href="#orgheadline10">5.5.2. Swarmer is architectured with the following components :</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#orgheadline22">6. Considerations &amp; Roadmap</a>
-<ul>
-<li><a href="#orgheadline13">6.1. CoreOS alpha channel</a></li>
-<li><a href="#orgheadline14">6.2. Use docker-machine</a></li>
-<li><a href="#orgheadline15">6.3. Run consul and swarm services as docker containers</a></li>
-<li><a href="#orgheadline16">6.4. Monitoring</a></li>
-<li><a href="#orgheadline17">6.5. Server.yml to bootstrap AWS</a></li>
-<li><a href="#orgheadline18">6.6. Running on GCE</a></li>
-<li><a href="#orgheadline19">6.7. Running on Azure</a></li>
-<li><a href="#orgheadline20">6.8. Running on premise</a></li>
-<li><a href="#orgheadline21">6.9. How to do rolling upgrades of the infrastructure with terraform&#x2026;?</a></li>
-</ul>
-</li>
+<li><a href="#orgheadline12">5. Play with your swarm cluster</a></li>
+<li><a href="#orgheadline22">6. Considerations &amp; Roadmap</a></li>
 </ul>
 </div>
 </div>
