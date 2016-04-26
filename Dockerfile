@@ -1,7 +1,7 @@
 FROM docker:1.10
 
 ENV TERRAFORM_VERSION 0.6.14
-ENV PACKER_VERSION 0.8.6
+ENV PACKER_VERSION 0.10.0
 
 #update
 RUN set -ex \
@@ -15,29 +15,6 @@ RUN set -ex \
     && mkdir $HOME/.gnupg \
     && echo "pinentry-program /usr/bin/pinentry-tty" > $HOME/.gnupg/gpg-agent.conf \
     && rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip packer_${PACKER_VERSION}_linux_amd64.zip \
-    /usr/local/bin/packer-builder-digitalocean \
-    /usr/local/bin/packer-builder-docker \
-    /usr/local/bin/packer-builder-googlecompute \
-    /usr/local/bin/packer-builder-openstack \
-    /usr/local/bin/packer-builder-vmware-iso \
-    /usr/local/bin/packer-builder-vmware-vmx \
-    /usr/local/bin/packer-post-processor-artifice \
-    /usr/local/bin/packer-post-processor-atlas \
-    /usr/local/bin/packer-post-processor-docker-import \
-    /usr/local/bin/packer-post-processor-docker-push \
-    /usr/local/bin/packer-post-processor-docker-save \
-    /usr/local/bin/packer-post-processor-docker-tag \
-    /usr/local/bin/packer-post-processor-vagrant-cloud \
-    /usr/local/bin/packer-post-processor-vsphere \
-    /usr/local/bin/packer-provisioner-ansible-local \
-    /usr/local/bin/packer-provisioner-chef-client \
-    /usr/local/bin/packer-provisioner-chef-solo \
-    /usr/local/bin/packer-provisioner-powershell \
-    /usr/local/bin/packer-provisioner-puppet-masterless \
-    /usr/local/bin/packer-provisioner-puppet-server \
-    /usr/local/bin/packer-provisioner-salt-masterless \
-    /usr/local/bin/packer-provisioner-windows-restart \
-    /usr/local/bin/packer-provisioner-windows-shell \
     /usr/local/bin/terraform-provider-atlas \
     /usr/local/bin/terraform-provider-azure \
     /usr/local/bin/terraform-provider-azurerm \
