@@ -9,6 +9,8 @@ CONSUL_VERSION=0.6.4
 /usr/bin/docker pull gliderlabs/registrator:v6
 wget -O /tmp/consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
 wget -O /tmp/config.yml https://raw.githubusercontent.com/docker/distribution/master/cmd/registry/config-example.yml
+curl -sSL https://dl.bintray.com/emccode/rexray/install > /tmp/install-rexray.sh
+
 
 #CREATE DIRS
 sudo mkdir -p /opt/swarmer
@@ -44,6 +46,8 @@ cat > /tmp/private-registry.conf <<EOF
 DOCKER_OPTS="--insecure-registry=registry.service.swarmer:5000"
 EOF
 sudo mv /tmp/private-registry.conf /etc/swarmer/docker.conf.d/
+chmod +x /tmp/install-rexray.sh
+/tmp/install-rexray.sh
 
 # SETUP SYSTEMD
 sudo systemctl enable swarmer.path

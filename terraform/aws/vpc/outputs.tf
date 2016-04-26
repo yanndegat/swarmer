@@ -4,6 +4,12 @@ output "registry_access_key_id" {
 output "registry_access_key_secret" {
   value = "${aws_iam_access_key.registry.secret}"
 }
+output "rexray_access_key_id" {
+  value = "${aws_iam_access_key.rexray_ak.id}"
+}
+output "rexray_access_key_secret" {
+  value = "${aws_iam_access_key.rexray_ak.secret}"
+}
 output "swarmer_access_key_id" {
   value = "${aws_iam_access_key.swarmer_ak.id}"
 }

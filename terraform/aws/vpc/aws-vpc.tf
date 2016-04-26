@@ -33,6 +33,14 @@ resource "aws_iam_group_policy" "swarmer_policy" {
 EOF
 }
 
+resource "aws_iam_group_membership" "team_swarmer" {
+    name = "tf-testing-group-membership"
+    users = [
+        "${aws_iam_user.swarmer.name}"
+    ]
+    group = "${aws_iam_group.swarmer.name}"
+}
+
 resource "aws_iam_access_key" "registry" {
     user = "${aws_iam_user.registry.name}"
 }
@@ -77,12 +85,52 @@ resource "aws_iam_user_policy" "registry" {
 EOF
 }
 
-resource "aws_iam_group_membership" "team_swarmer" {
-    name = "tf-testing-group-membership"
-    users = [
-        "${aws_iam_user.swarmer.name}"
+resource "aws_iam_user" "rexray" {
+    name = "rexray"
+    path = "/${var.stack_name}/users/"
+}
+
+resource "aws_iam_access_key" "rexray_ak" {
+    user = "${aws_iam_user.rexray.name}"
+}
+
+resource "aws_iam_user_policy" "rexray" {
+    name = "rexray"
+    user = "${aws_iam_user.rexray.name}"
+    policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "RexRayMin",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:AttachVolume",
+                "ec2:CreateVolume",
+                "ec2:CreateSnapshot",
+                "ec2:CreateTags",
+                "ec2:DeleteVolume",
+                "ec2:DeleteSnapshot",
+                "ec2:DescribeAvailabilityZones",
+                "ec2:DescribeInstances",
+                "ec2:DescribeVolumes",
+                "ec2:DescribeVolumeAttribute",
+                "ec2:DescribeVolumeStatus",
+                "ec2:DescribeSnapshots",
+                "ec2:CopySnapshot",
+                "ec2:DescribeSnapshotAttribute",
+                "ec2:DetachVolume",
+                "ec2:ModifySnapshotAttribute",
+                "ec2:ModifyVolumeAttribute",
+                "ec2:DescribeTags"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
     ]
-    group = "${aws_iam_group.swarmer.name}"
+}
+EOF
 }
 
 resource "aws_key_pair" "keypair" {

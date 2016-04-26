@@ -18,6 +18,17 @@ coreos:
   update:
     reboot-strategy: off
 write_files:
+  - path: "/etc/rexray/config.yml"
+    permissions: "0644"
+    owner: "root"
+    content: |
+      rexray:
+        storageDrivers:
+          - ec2
+      aws:
+        accessKey: ${var.rexray_access_key_id}
+        secretKey: ${var.rexray_access_key_secret}
+        rexrayTag: ${var.stack_name}
   - path: "/etc/swarmer/swarmer.conf"
     permissions: "0644"
     owner: "root"
@@ -97,6 +108,17 @@ coreos:
   update:
     reboot-strategy: off
 write_files:
+  - path: "/etc/rexray/config.yml"
+    permissions: "0644"
+    owner: "root"
+    content: |
+      rexray:
+        storageDrivers:
+          - ec2
+      aws:
+        accessKey: ${var.rexray_access_key_id}
+        secretKey: ${var.rexray_access_key_secret}
+        rexrayTag: ${var.stack_name}
   - path: "/etc/swarmer/swarmer.conf"
     permissions: "0644"
     owner: "root"

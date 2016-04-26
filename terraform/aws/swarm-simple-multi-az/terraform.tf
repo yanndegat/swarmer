@@ -18,6 +18,8 @@ module "swarm-cluster-zone-a" {
      admin_network = "${var.subnet_network_zone_a}"
      registry_access_key_id = "${var.registry_access_key_id}"
      registry_access_key_secret = "${var.registry_access_key_secret}"
+     rexray_access_key_id = "${var.rexray_access_key_id}"
+     rexray_access_key_secret = "${var.rexray_access_key_secret}"
      bucket = "${var.bucket}"
      aws_region= "${var.aws_region}"
 }
@@ -43,6 +45,8 @@ module "swarm-cluster-zone-b" {
      admin_network = "${var.subnet_network_zone_b}"
      registry_access_key_id = "${var.registry_access_key_id}"
      registry_access_key_secret = "${var.registry_access_key_secret}"
+     rexray_access_key_id = "${var.rexray_access_key_id}"
+     rexray_access_key_secret = "${var.rexray_access_key_secret}"
      bucket = "${var.bucket}"
      aws_region= "${var.aws_region}"
 }

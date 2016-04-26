@@ -87,6 +87,17 @@ variable "registry_access_key_secret" {
     default = ""
     description = "aws access key for the registry"
 }
+
+variable "rexray_access_key_id" {
+    default = ""
+    description = "aws access key for rexray"
+}
+
+variable "rexray_access_key_secret" {
+    default = ""
+    description = "aws access key for rexray"
+}
+
 variable "bucket" {
     default = ""
     description = "s3 bucket for the registry"
