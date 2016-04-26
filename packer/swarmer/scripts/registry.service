@@ -6,7 +6,7 @@ Requires=swarm.service consul.service docker.service
 [Service]
 Restart=always
 RestartSec=10s
-ExecStart=/opt/swarmer/registry/start-registry
+ExecStart=/opt/swarmer/start-registry
 ExecStop=/usr/bin/docker stop registry
 [Install]
 WantedBy=default.target
