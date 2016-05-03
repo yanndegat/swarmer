@@ -1,14 +1,17 @@
 #!/bin/bash
-REGISTRATOR_CONTAINER_NAME="registrator"
-REGISTRATOR_VERSION="v6"
-ADMIN_NETWORK="default"
-PUBLIC_NETWORK="default"
-
 if [[ -f "/etc/swarmer/swarmer.conf" ]]; then
-    . /etc/swarmer/swarmer.conf
+    source /etc/swarmer/swarmer.conf
 fi
 
+REGISTRATOR_VERSION="latest"
+ADMIN_NETWORK=${ADMIN_NETWORK:-default}
+PUBLIC_NETWORK=${PUBLIC_NETWORK:-default}
 verbose=0
+
+log(){
+   logger -s -t "registrator" -p "$@"
+}
+
 
 # Usage info
 show_help() {
@@ -29,10 +32,6 @@ OPTIONS:
 EOF
 }
 
-servicename(){
-    echo "${REGISTRATOR_CONTAINER_NAME}"
-}
-
 getpubipaddr(){
     # Keep trying to retrieve IP addr until it succeeds. Timeouts after 1m
     now=$(date +%s)
@@ -40,7 +39,7 @@ getpubipaddr(){
     set +e
     while :; do
         if [[ $timeout -lt $(date +%s) ]]; then
-            logger -t "$SWARM_CONTAINER_NAME" "Could not retrieve IP Address. Exiting"
+            log user.error "Could not retrieve IP Address. Exiting"
             exit 5
         fi
         ip route | grep -q "^$PUBLIC_NETWORK"
@@ -48,7 +47,7 @@ getpubipaddr(){
         sleep 1
     done
 
-    printf "$(ip route | grep "^$PUBLIC_NETWORK" | sed 's/.*src \([0-9\.]*\) .*/\1/g')"
+    ip route | grep "^$PUBLIC_NETWORK" | sed 's/.*src \([0-9\.]*\) .*/\1/g'
 }
 
 gethostadminipaddr(){
@@ -58,7 +57,7 @@ gethostadminipaddr(){
     set +e
     while :; do
         if [[ $timeout -lt $(date +%s) ]]; then
-            logger -t "$SWARM_CONTAINER_NAME" "Could not retrieve IP Address. Exiting"
+            log user.error "Could not retrieve IP Address. Exiting"
             exit 5
         fi
         ip route | grep -q "^$ADMIN_NETWORK"
@@ -66,36 +65,47 @@ gethostadminipaddr(){
         sleep 1
     done
 
-    printf "$(ip route | grep "^$ADMIN_NETWORK" | sed 's/.*src \([0-9\.]*\) .*/\1/g')"
+    ip route | grep "^$ADMIN_NETWORK" | sed 's/.*src \([0-9\.]*\) .*/\1/g'
 }
 
-start() {
-    stop
-    /usr/bin/docker run \
-                    -v /var/run/docker.sock:/tmp/docker.sock \
-                    --name $(servicename) \
-                    gliderlabs/registrator:${REGISTRATOR_VERSION} -ip=$(getpubipaddr) consul://$(gethostadminipaddr):8500 -resync 10 -ttl 10
+start(){
+    log user.info "start"
+    rkt run \
+        --volume hosts,kind=host,source=/etc/hosts,readOnly=true \
+        --volume dockersocket,kind=host,source=/var/run/docker.sock,readOnly=true \
+        --volume cacert,kind=host,source=/etc/swarmer/certs/cluster.crt,readOnly=true \
+        --volume cert,kind=host,source=/etc/swarmer/certs/client.crt,readOnly=true \
+        --volume key,kind=host,source=/etc/swarmer/certs/client.key,readOnly=true \
+        --mount volume=hosts,target=/etc/hosts \
+        --mount volume=dockersocket,target=/tmp/docker.sock \
+        --mount volume=cacert,target=/tmp/cacert \
+        --mount volume=cert,target=/tmp/cert \
+        --mount volume=key,target=/tmp/key \
+        --uuid-file-save /var/run/registrator.uuid \
+        --set-env=CONSUL_HTTP_SSL=true \
+        --set-env=CONSUL_HTTP_SSL_VERIFY=true \
+        --set-env CONSUL_CACERT=/tmp/cacert \
+        --set-env CONSUL_TLSCERT=/tmp/cert \
+        --set-env CONSUL_TLSKEY=/tmp/key \
+        "registry-1.docker.io/cyprien/registrator:$REGISTRATOR_VERSION" --exec /bin/registrator -- \
+        -ip="$(getpubipaddr)" -resync 10 -ttl 10 -ttl-refresh 5 "consul-tls://consul.service.$DATACENTER.$STACK_NAME:8500"
 }
 
 stop() {
-    if (docker ps | grep -q $(servicename)); then
-        /usr/bin/docker stop -t 2 $(servicename) >&2
-    fi
-    if (docker ps -a | grep -q $(servicename)); then
-        /usr/bin/docker rm $(servicename) >&2
+    log user.info "stop"
+    if [ -f /var/run/registrator.uuid ]; then
+        sudo machinectl kill "rkt-$(cat /var/run/registrator.uuid)"
     fi
 }
 
 OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
-while getopts ":hv:n:" opt; do
+while getopts ":hv:" opt; do
     case "$opt" in
         h)
             show_help
             exit 0
             ;;
         v)  verbose=$((verbose+1))
-            ;;
-        n)  REGISTRATOR_CONTAINER_NAME=$OPTARG
             ;;
         '?')
             show_help >&2
@@ -107,11 +117,9 @@ shift "$((OPTIND-1))" # Shift off the options and optional --.
 
 case $1 in
     start)
-        logger -t "$(servicename)" "start"
         start
         ;;
     stop)
-        logger -t "$(servicename)" "stop"
         stop
         ;;
     *)

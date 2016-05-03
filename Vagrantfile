@@ -4,31 +4,30 @@ require 'yaml'
 require 'tempfile'
 require 'socket'
 
-server_yaml_path = ENV["SERVER_YML"] || "./servers.yml"
-
-spec = YAML.load_file(File.join(File.dirname(__FILE__), server_yaml_path ))
-
-box = spec['box'] || "yanndegat/swarmer"
-admin_network = spec['admin_network']
-docker_registry = spec['docker_registry']
-servers = spec['servers']
-consul_joinip = servers.first['priv_ip']
-host_ip = Socket.ip_address_list.find { |ai| ai.ipv4? && !ai.ipv4_loopback? }.ip_address
-
-vol_dir="#{Dir.pwd}/vbox_volumes"
-
-# Start vbox remote control server
-if ARGV[0] == 'up' || ARGV[0] == 'destroy'
-  system "killall vboxwebsrv"
-end
-if ARGV[0] == 'up'
-  system "mkdir -p #{vol_dir}"
-  system "VBoxManage setproperty websrvauthlibrary null"
-  system "vboxwebsrv -H 0.0.0.0 -b"
-end
-
 # Create and configure the VMs
 Vagrant.configure("2") do |config|
+  server_yaml_path = ENV["SERVER_YML"] || "./vagrant.d/servers.yml"
+
+  spec = YAML.load_file(File.join(File.dirname(__FILE__), server_yaml_path ))
+
+  box = spec['box'] || "yanndegat/swarmer"
+  admin_network = spec['admin_network']
+  docker_registry = spec['docker_registry']
+  servers = spec['servers']
+  consul_joinip = servers.first['priv_ip']
+  host_ip = Socket.ip_address_list.find { |ai| ai.ipv4? && !ai.ipv4_loopback? }.ip_address
+  cacerts_archive = IO.read("./vagrant.d/certs.dev.vagrant.tar.base64").split("\n").collect{|line| "     #{line}"}.join("\n")
+  vol_dir="#{Dir.pwd}/vbox_volumes"
+
+  # Start vbox remote control server
+  if ARGV[0] == 'up' || ARGV[0] == 'destroy'
+    system "killall vboxwebsrv"
+  end
+  if ARGV[0] == 'up'
+    system "mkdir -p #{vol_dir}"
+    system "VBoxManage setproperty websrvauthlibrary null"
+    system "vboxwebsrv -H 0.0.0.0 -b"
+  end
 
   # Always use Vagrant's default insecure key
   config.ssh.insert_key = false
@@ -61,10 +60,20 @@ write_files:
     content: |
       export JOINIPADDR=#{consul_joinip}
       export CLUSTER_SIZE=#{servers.size}
-      export CONSUL_OPTS="-ui -node=#{server['name']} -dc=vagrant"
+      export CONSUL_OPTS="-ui -node=#{server['name']}"
       export ADMIN_NETWORK="#{admin_network}"
       export PUBLIC_NETWORK="#{admin_network}"
       export SWARM_MODE="both"
+      export VOLUME_DRIVER=rexray
+      export STACK_NAME=vagrant
+      export DATACENTER=dev
+      # key genererated via command "consul keygen"
+      export CONSUL_ENCRYPT_KEY=+gdD1MXzKEdcSqGOMUMjfg==
+  - path: "/etc/swarmer/certs.tar.base64"
+    permissions: "0600"
+    owner: "root"
+    content: |
+#{cacerts_archive}
 EOF
 
     userdata_file = Tempfile.new(server['name'])

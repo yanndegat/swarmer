@@ -1,0 +1,23 @@
+#!/bin/bash
+BASEDIR=$(readlink -f "$(dirname "$0")")
+STACK="$1"
+shift
+DATACENTER="$1"
+shift
+
+if [ -z "$STACK" ] || [ -z "$DATACENTER" ]; then
+    echo "usage: $BASEDIR/swarmer.sh STACK DATACENTER [docker commands]"
+fi
+
+if [ ! -d "$HOME/.swarmer/$STACK/$DATACENTER" ]; then
+    echo "$STACK/$DATACENTER is not present in $HOME/.swarmer. Generate the certificates with:" >&2
+    echo "$BASEDIR/certs.sh $STACK $DATACENTER" >&2
+    exit 1
+fi
+
+HOST="swarm.service.$DATACENTER.$STACK:4000"
+CACERT="$HOME/.swarmer/$STACK/$DATACENTER/cluster.crt"
+CERT="$HOME/.swarmer/$STACK/$DATACENTER/client.crt"
+KEY="$HOME/.swarmer/$STACK/$DATACENTER/client.key"
+
+docker -H "$HOST" --tlsverify --tlscacert "$CACERT" --tlscert "$CERT" --tlskey "$KEY" "$@"

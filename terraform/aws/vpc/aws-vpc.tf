@@ -393,7 +393,7 @@ resource "aws_security_group_rule" "bastion_to_consul_cluster_udp" {
 resource "aws_security_group_rule" "bastion_to_consul_agent" {
     type = "egress"
     from_port = 8500
-    to_port = 8500
+    to_port = 8501
     protocol = "tcp"
     security_group_id = "${aws_security_group.bastion.id}"
     source_security_group_id = "${aws_security_group.nodes.id}"
@@ -523,7 +523,7 @@ resource "aws_security_group_rule" "nodes_from_bastion_docker_registry" {
 resource "aws_security_group_rule" "nodes_from_bastion_consul_agent" {
     type = "ingress"
     from_port = 8500
-    to_port = 8500
+    to_port = 8501
     protocol = "tcp"
     security_group_id = "${aws_security_group.nodes.id}"
     source_security_group_id = "${aws_security_group.bastion.id}"
@@ -611,7 +611,7 @@ resource "aws_security_group_rule" "nodes_from_node_consul_cluster_udp" {
 resource "aws_security_group_rule" "nodes_from_node_consul_agent" {
     type = "ingress"
     from_port = 8500
-    to_port = 8500
+    to_port = 8501
     protocol = "tcp"
     security_group_id = "${aws_security_group.nodes.id}"
     source_security_group_id = "${aws_security_group.nodes.id}"

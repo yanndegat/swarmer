@@ -1,34 +1,30 @@
 #!/bin/bash
+if [[ -f "/etc/swarmer/swarmer.conf" ]]; then
+    source /etc/swarmer/swarmer.conf
+fi
 
 SERVICE_NAME="consul"
-CONSUL_CLUSTER_SIZE=3
-CONSUL_MODE="server"
+STACK_NAME=${STACK_NAME:-swarmer}
+DATACENTER=${DATACENTER:-dc1}
+CONSUL_CLUSTER_SIZE=${CONSUL_CLUSTER_SIZE:-3}
+CONSUL_MODE=${CONSUL_MODE:-"server"}
 CONSUL_SERVER_OPTS="-server -bootstrap-expect $CONSUL_CLUSTER_SIZE"
 CONSUL_DATADIR="/var/lib/consul"
-BASE_CONSUL_OPTS="-data-dir $CONSUL_DATADIR -domain swarmer"
-ADMIN_NETWORK="default"
-CONSUL_BIN=$(readlink -f $(dirname $0))/consul
-
-if [[ -f "/etc/swarmer/swarmer.conf" ]]; then
-    . /etc/swarmer/swarmer.conf
-fi
-
-if [[ ! -x $CONSUL_BIN ]]; then
-    echo "can't find executable consul bin."
-    exit 1
-fi
-
-if [[ ! -d $CONSUL_DATADIR ]]; then
-    mkdir -p $CONSUL_DATADIR
-fi
-
+BASE_CONSUL_OPTS="-data-dir $CONSUL_DATADIR -dc ${DATACENTER} -domain ${STACK_NAME}"
+ADMIN_NETWORK=${ADMIN_NETWORK:-default}
+CONSUL_BIN=$(readlink -f "$(dirname "$0")")/consul
 verbose=0
+
+if [ ! -z "$CONSUL_ENCRYPT_KEY" ]; then
+    CONSUL_OPTS="$CONSUL_OPTS -encrypt $CONSUL_ENCRYPT_KEY"
+fi
+
 
 getjoinipaddr(){
     JOIN=$(peers)
 
     if [[ ! -z $JOIN ]]; then
-        echo $JOIN
+        echo "$JOINIPADDR,$JOIN"
     elif [[ -z $JOIN ]] && [[ ! -z $JOINIPADDR ]]; then
         echo "$JOINIPADDR"
     else
@@ -51,12 +47,8 @@ gethostadminipaddr(){
         sleep 1
     done
 
-    printf "$(ip route | grep "^$ADMIN_NETWORK" | sed 's/.*src \([0-9\.]*\) .*/\1/g')"
+    ip route | grep "^$ADMIN_NETWORK" | sed 's/.*src \([0-9\.]*\) .*/\1/g'
 }
-
-
-HOSTIP=$(gethostadminipaddr)
-
 
 # Usage info
 show_help() {
@@ -97,13 +89,13 @@ start() {
 
     JOIN=$(getjoinipaddr)
     if [[ $? == 0 ]]; then
-        CONSUL_OPTS="$CONSUL_OPTS -retry-join=$JOIN -rejoin"
+        CONSUL_OPTS="$CONSUL_OPTS -retry-join=$(echo "$JOIN" | sed 's/,/ -retry-join=/g') -rejoin"
     fi
 
     CONSUL_OPTS="$CONSUL_OPTS -advertise=$HOSTIP -client=0.0.0.0"
 
     logger -t "$SERVICE_NAME" "Starting agent with opts: $CONSUL_OPTS"
-    $CONSUL_BIN agent $BASE_CONSUL_OPTS $CONSUL_OPTS
+    $CONSUL_BIN agent $BASE_CONSUL_OPTS $CONSUL_OPTS -config-file $CONSUL_DATADIR/secure-conf.json
 }
 
 stop() {
@@ -112,9 +104,41 @@ stop() {
 
 peers() {
     if [ -d $CONSUL_DATADIR/raft ] && [ -f $CONSUL_DATADIR/raft/peers.json ]; then
-        cat $CONSUL_DATADIR/raft/peers.json | jq '.[]' | paste -d , -s | sed 's/"//g'| sed 's/:8300//g' | sed "s/$HOSTIP[,]*//g"
+        jq '.[]' < "$CONSUL_DATADIR/raft/peers.json" | paste -d , -s | sed 's/"//g'| sed 's/:8300//g'
     fi
 }
+
+if [[ ! -x $CONSUL_BIN ]]; then
+    echo "can't find executable consul bin."
+    exit 1
+fi
+
+if [[ ! -d $CONSUL_DATADIR ]]; then
+    mkdir -p $CONSUL_DATADIR
+fi
+
+HOSTIP=$(gethostadminipaddr)
+
+cat > $CONSUL_DATADIR/secure-conf.json <<EOF
+{
+    "node_name": "$(hostname)",
+    "datacenter": "$DATACENTER",
+    "domain" : "$STACK_NAME",
+    "data_dir": "$CONSUL_DATADIR",
+    "log_level": "INFO",
+    "node_name": "",
+    "ports": {
+      "http": -1,
+      "https": 8500
+    },
+    "ca_file": "/etc/swarmer/certs/cluster.crt",
+    "cert_file": "/etc/swarmer/certs/control-consul.service.$DATACENTER.$STACK_NAME.crt",
+    "key_file": "/etc/swarmer/certs/control-consul.service.$DATACENTER.$STACK_NAME.key",
+    "verify_incoming": true,
+    "verify_outgoing": true,
+    "log_level": "INFO"
+}
+EOF
 
 OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
 while getopts ":ahv:c:j:" opt; do

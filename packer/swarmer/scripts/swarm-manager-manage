@@ -1,0 +1,165 @@
+#!/bin/bash -e
+if [[ -f "/etc/swarmer/swarmer.conf" ]]; then
+    source /etc/swarmer/swarmer.conf
+fi
+
+SWARM_CONTAINER_NAME=${SWARM_CONTAINER_NAME:-swarm}
+SWARM_MODE=${SWARM_MODE:-both}
+SWARM_VERSION=${SWARM_VERSION:-1.1.3}
+ADMIN_NETWORK=${ADMIN_NETWORK:-default}
+STACK_NAME=${STACK_NAME:-swarmer}
+verbose=0
+
+log(){
+   logger -s -t "swarm-manager" -p "$@"
+}
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hv] start|stop|check|register|engine-ops
+Handles the lifecycle of a swarm manager
+
+COMMANDS:
+    start              Starts a swarm manager
+    stop               Stops a swarm manager
+    engine-opts        Echo engine opts
+    register           Registers manager in consul
+    check              Checks if manager is running
+
+OPTIONS:
+    -h                 display this help and exit
+    -v                 verbose mode. Can be used multiple
+                       times for increased verbosity.
+EOF
+}
+
+gethostadminipaddr(){
+    # Keep trying to retrieve IP addr until it succeeds. Timeouts after 1m
+    now=$(date +%s)
+    timeout=$(( now + 60 ))
+    set +e
+    while :; do
+        if [[ $timeout -lt $(date +%s) ]]; then
+            log user.error "Could not retrieve IP Address. Exiting"
+            exit 1
+        fi
+        ip route | grep -q "^$ADMIN_NETWORK"
+        [ $? -eq 0 ] && break
+        sleep 1
+    done
+
+    ip route | grep "^$ADMIN_NETWORK" | sed 's/.*src \([0-9\.]*\) .*/\1/g'
+}
+
+engine_opts(){
+    IP=$(gethostadminipaddr)
+    echo "-H tcp://$IP:2376 --tlsverify --tlscacert=/etc/swarmer/certs/cluster.crt --tlscert=/etc/swarmer/certs/control-swarm.service.$DATACENTER.$STACK_NAME.crt --tlskey=/etc/swarmer/certs/control-swarm.service.$DATACENTER.$STACK_NAME.key --cluster-store=consul://consul.service.$DATACENTER.$STACK_NAME:8500 --cluster-store-opt kv.cacertfile=/etc/swarmer/certs/cluster.crt --cluster-store-opt kv.certfile=/etc/swarmer/certs/client.crt --cluster-store-opt kv.keyfile=/etc/swarmer/certs/client.key --cluster-advertise=$IP:2376"
+}
+
+start(){
+    log user.info "start"
+    IP=$(gethostadminipaddr)
+    rkt run \
+        --net=host \
+        --volume hosts,kind=host,source=/etc/hosts,readOnly=true \
+        --volume certs,kind=host,source=/etc/swarmer/certs,readOnly=true \
+        --volume data,kind=host,source=/var/lib/swarm-manager,readOnly=false \
+        --mount volume=hosts,target=/etc/hosts \
+        --mount volume=certs,target=/certs \
+        --mount volume=data,target=/.swarm \
+        --uuid-file-save /var/run/swarm-manager.uuid \
+        "registry-1.docker.io/library/swarm:$SWARM_VERSION" --exec /swarm -- \
+        manage --host 0.0.0.0:4000 --replication --advertise "$IP":4000 \
+        --tlsverify \
+        --tlscacert=/certs/cluster.crt \
+        --tlscert="/certs/control-swarm.service.$DATACENTER.$STACK_NAME".crt \
+        --tlskey="/certs/control-swarm.service.$DATACENTER.$STACK_NAME".key \
+        --discovery-opt kv.cacertfile=/certs/cluster.crt \
+        --discovery-opt kv.certfile=/certs/client.crt \
+        --discovery-opt kv.keyfile=/certs/client.key \
+        "consul://consul.service.$DATACENTER.$STACK_NAME:8500/swarm"
+}
+
+register(){
+    #registers in consul
+    TMPFILE=$(mktemp)
+    cat > "$TMPFILE" <<EOF
+{
+  "Name": "swarm",
+  "Address": "$IP",
+  "Port": 4000,
+  "Check": {
+    "Script": "/opt/swarmer/swarm-manager-manage",
+    "Interval": "10s"
+  }
+}
+EOF
+    curl --fail \
+         --cacert /etc/swarmer/certs/cluster.crt \
+         --cert /etc/swarmer/certs/client.crt \
+         --key /etc/swarmer/certs/client.key \
+         -XPUT "https://consul.service.$DATACENTER.$STACK_NAME:8500/v1/agent/service/register" -d @"$TMPFILE" 2>/dev/null
+    rm "$TMPFILE"
+}
+
+check(){
+    /usr/bin/curl --fail \
+         --cacert /etc/swarmer/certs/cluster.crt \
+         --cert /etc/swarmer/certs/client.crt \
+         --key /etc/swarmer/certs/client.key \
+         -XGET "https://swarm.service.$DATACENTER.${STACK_NAME}:4000/_ping"
+}
+
+stop() {
+    log user.info "stop"
+    if [ -f /var/run/swarm-manager.uuid ]; then
+        sudo machinectl kill "rkt-$(cat /var/run/swarm-manager.uuid)"
+    fi
+}
+
+if [ "$SWARM_MODE" != "manager" ] && [ "$SWARM_MODE" != "both" ]; then
+    log user.info "not a swarm manager node: nothing to do."
+    exit 0
+fi
+
+mkdir -p /var/lib/swarm-manager
+
+OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
+while getopts ":hv:n:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        v)  verbose=$((verbose+1))
+            ;;
+        '?')
+            show_help >&2
+            exit 2
+            ;;
+    esac
+done
+
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+case $1 in
+    engine-opts)
+        engine_opts
+        ;;
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    check)
+        check
+        ;;
+    register)
+        register
+        ;;
+    *)
+        check
+        ;;
+esac

@@ -1,0 +1,9 @@
+[Unit]
+Description=Dockerized Swarm Agent Service
+PartOf=swarmer.service
+Requires=docker.service consul.service
+After=docker.service consul.service
+[Service]
+Restart=on-failure
+ExecStart=/opt/swarmer/swarm-agent-manage start
+ExecStop=/opt/swarmer/swarm-agent-manage stop

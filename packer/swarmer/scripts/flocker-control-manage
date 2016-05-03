@@ -1,0 +1,177 @@
+#!/bin/bash
+CONF_DIR=/etc/flocker
+LIB_DIR=/var/lib/flocker
+
+log(){
+   logger -s -t "flocker-init" -p $@
+}
+
+gethostadminipaddr(){
+    # Keep trying to retrieve IP addr until it succeeds. Timeouts after 1m
+    now=$(date +%s)
+    timeout=$(( now + 60 ))
+    set +e
+    while :; do
+        if [[ $timeout -lt $(date +%s) ]]; then
+            log user.error "Could not retrieve IP Address. Exiting"
+            exit 5
+        fi
+        ip route | grep -q "^$ADMIN_NETWORK"
+        [ $? -eq 0 ] && break
+        sleep 1
+    done
+
+    printf "$(ip route | grep "^$ADMIN_NETWORK" | sed 's/.*src \([0-9\.]*\) .*/\1/g')"
+}
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hv] start|stop|init|register|check
+Handles the lifecycle of the flocker control service
+
+COMMANDS:
+    init               init flocker cluster & controller certificates
+    check              (DEFAULT)check if the service is running
+    register           register flocker controller in consul
+    start              start flocker controller
+    stop               stop flocker controller
+OPTIONS:
+    -h                 display this help and exit
+    -v                 verbose mode. Can be used multiple
+                       times for increased verbosity.
+EOF
+}
+
+start() {
+    if [ ! -f $CONF_DIR/cluster.crt ] \
+       || [ ! -f $CONF_DIR/client.crt ] \
+       || [ ! -f $CONF_DIR/client.key ] \
+       || [ ! -f $CONF_DIR/control-service.crt ] \
+       || [ ! -f $CONF_DIR/control-service.key ]; then
+        log.error "flocker not initialized. run flocker-control-manage init"
+    fi
+
+    sudo rkt run --insecure-options=image \
+         --net=host \
+         --volume data,kind=host,source=$LIB_DIR,readOnly=false \
+         --volume conf,kind=host,source=$CONF_DIR \
+         --mount volume=data,target=$LIB_DIR \
+         --mount volume=conf,target=$CONF_DIR \
+         --uuid-file-save /var/run/flocker-control.uuid \
+         docker://clusterhq/flocker-control-service
+}
+
+stop() {
+     sudo machinectl kill rkt-$(cat /var/run/flocker-control.uuid)
+}
+
+check(){
+    curl \
+        --fail \
+        --cacert $CONF_DIR/cluster.crt \
+        --cert $CONF_DIR/client.crt \
+        --key $CONF_DIR/client.key \
+        https://flocker-control.service.${STACK_NAME}:4523/v1/version > /dev/null 2>&1
+}
+
+register() {
+    #registers in consul
+    TMPFILE=$(mktemp)
+    cat > $TMPFILE <<EOF
+{
+  "Name": "flocker-control",
+  "Tags": [ "flocker-control", "${STACK_NAME}" ],
+  "Address": "$(gethostadminipaddr)",
+  "Port": 4523,
+  "Check": {
+    "Script": "/opt/swarmer/flocker-control-manage check",
+    "Interval": "10s",
+    "TTL": "15s"
+  }
+}
+EOF
+    curl -XPUT "http://localhost:8500/v1/agent/service/register" -d @$TMPFILE 2>/dev/null
+    rm $TMPFILE
+}
+
+init() {
+    mkdir -p $CONF_DIR $LIB_DIR
+    log user.info "generate flocker controller certificates"
+    TMPDIR=$(mktemp -d)
+    #Generates certificates for Control service
+    docker run --rm -v $TMPDIR:/flocker yanndegat/flocker-tools /bin/bash -c "cd /flocker && /usr/local/bin/flocker-ca initialize ${STACK_NAME}"
+    docker run --rm -v $TMPDIR:/flocker yanndegat/flocker-tools /bin/bash -c "cd /flocker && /usr/local/bin/flocker-ca create-control-certificate flocker-control.service.${STACK_NAME}"
+    docker run --rm -v $TMPDIR:/flocker yanndegat/flocker-tools /bin/bash -c "cd /flocker && /usr/local/bin/flocker-ca create-api-certificate client"
+
+    mv $TMPDIR/control-flocker-control.service.swarmer.key $CONF_DIR/control-service.key
+    mv $TMPDIR/control-flocker-control.service.swarmer.crt $CONF_DIR/control-service.crt
+    mv $TMPDIR/client.key $CONF_DIR/client.key
+    mv $TMPDIR/client.crt $CONF_DIR/client.crt
+    mv $TMPDIR/cluster.crt $CONF_DIR/cluster.crt
+    chmod 0700 $CONF_DIR
+    chmod 0600 $CONF_DIR/control-service.key $CONF_DIR/client.key
+    rm -Rf $TMPDIR
+
+    #Upload cluster certificate to consul to make it available for agent nodes
+    log user.info "upload flocker cluster certificate to consul"
+    cat $CONF_DIR/cluster.crt | curl -XPUT "http://localhost:8500/v1/kv/swarmer/flocker-cluster-crt" -d - > /dev/null 2>&1 || exit 1
+}
+
+if [ ! /etc/swarmer/swarmer.conf ]; then
+    log user.error "couldn't find configuration file"
+    exit 1
+fi
+
+source /etc/swarmer/swarmer.conf
+
+STACK_NAME=${STACK_NAME:-swarmer}
+ADMIN_NETWORK=${ADMIN_NETWORK:-"default"}
+FLOCKER=${FLOCKER:-1}
+
+if [ $FLOCKER != "1" ]; then
+    log user.info "flocker is disabled"
+    exit 0
+fi
+if [ $SWARM_MODE != "manager" ] && [ $SWARM_MODE != "both" ]; then
+    log user.info "not a flocker controller node: nothing to do."
+    exit 0
+fi
+
+OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
+while getopts ":hv:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        v)  verbose=$((verbose+1))
+            ;;
+        '?')
+            show_help >&2
+            exit 1
+            ;;
+    esac
+done
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+case $1 in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    register)
+        register
+        ;;
+    init)
+        init
+        ;;
+    check)
+        check
+        ;;
+    *)
+        check
+        ;;
+esac

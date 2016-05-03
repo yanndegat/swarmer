@@ -3,14 +3,19 @@
 CONSUL_VERSION=0.6.4
 
 #DOWNLOADS
-/usr/bin/docker pull andyshinn/dnsmasq
-/usr/bin/docker pull swarm:1.1.3
-/usr/bin/docker pull registry:2
-/usr/bin/docker pull gliderlabs/registrator:v6
+#rkt fetch --insecure-options=image docker://flocker-control-service:latest
+#rkt fetch --insecure-options=image docker://flocker-container-agent:latest
+#rkt fetch --insecure-options=image docker://flocker-dataset-agent:latest
+#rkt fetch --insecure-options=image docker://flocker-docker-plugin:latest
+
+rkt fetch --insecure-options=image docker://andyshinn/dnsmasq:2.75
+rkt fetch --insecure-options=image docker://swarm:1.1.3
+rkt fetch --insecure-options=image docker://registry:2
+rkt fetch --insecure-options=image docker://cyprien/registrator:latest
+
 wget -O /tmp/consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
 wget -O /tmp/config.yml https://raw.githubusercontent.com/docker/distribution/master/cmd/registry/config-example.yml
 curl -sSL https://dl.bintray.com/emccode/rexray/install > /tmp/install-rexray.sh
-
 
 #CREATE DIRS
 sudo mkdir -p /opt/swarmer
@@ -24,28 +29,20 @@ sudo unzip /tmp/consul.zip
 sudo rm /tmp/consul.zip
 popd
 
-sudo mv /tmp/{consul,registrator,swarm}-manage /opt/swarmer/
+sudo mv /tmp/{consul,registry,registrator,swarm-manager,swarm-agent,flocker-control,flocker-agent}-manage /opt/swarmer/
+sudo mv /tmp/dnsmasq-manifest.sh /opt/swarmer/
 sudo mv /tmp/docker-configurator /opt/swarmer/
-sudo mv /tmp/start-registry /opt/swarmer/
-sudo chmod +x /opt/swarmer/{consul,registrator,swarm}-manage
+sudo mv /tmp/swarmer-init /opt/swarmer/
+sudo chmod +x /opt/swarmer/{consul,registry,registrator,swarm-agent,swarm-manager}-manage
 sudo chmod +x /opt/swarmer/docker-configurator
-sudo chmod +x /opt/swarmer/start-registry
+sudo chmod +x /opt/swarmer/swarmer-init
+sudo chmod +x /opt/swarmer/dnsmasq-manifest.sh
 
-sudo mv /tmp/swarmer.service /etc/systemd/system
-sudo mv /tmp/swarmer.path /etc/systemd/system
-sudo mv /tmp/consul.service /etc/systemd/system
-sudo mv /tmp/dnsmasq.service /etc/systemd/system
-sudo mv /tmp/registrator.service /etc/systemd/system
-sudo mv /tmp/docker-configurator.service /etc/systemd/system
-sudo mv /tmp/swarm.service /etc/systemd/system
-sudo mv /tmp/registry.service /etc/systemd/system
+sudo mv /tmp/{swarmer,consul,dnsmasq,registrator,docker-configurator,swarm-manager,swarm-agent,registry}.service /etc/systemd/system/
+sudo mv /tmp/swarmer.path /etc/systemd/system/
 
 sudo mv /tmp/config.yml /etc/docker/registry
 sudo mv /tmp/60-swarm.conf /etc/swarmer/docker.conf.d/
-cat > /tmp/private-registry.conf <<EOF
-DOCKER_OPTS="--insecure-registry=registry.service.swarmer:5000"
-EOF
-sudo mv /tmp/private-registry.conf /etc/swarmer/docker.conf.d/
 chmod +x /tmp/install-rexray.sh
 /tmp/install-rexray.sh
 

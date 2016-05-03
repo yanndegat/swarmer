@@ -1,0 +1,37 @@
+{
+  "acVersion": "0.7.4",
+  "acKind": "PodManifest",
+  "apps": [
+    {
+      "name": "dnsmasq",
+      "image": {
+        "name": "registry-1.docker.io/andyshinn/dnsmasq:2.75",
+        "id": "sha512-...",
+        "labels": [
+          {
+            "name":  "version",
+            "value": "1.0.0"
+          }
+        ]
+      },
+      "app": {
+        "exec": [
+          "/usr/sbin/dnsmasq",
+          "-k",
+          "-S",
+          ""
+        ],
+        "group": "0",
+        "user": "0"
+      }
+    }
+  ],
+  "isolators": [
+    {
+      "name": "resource/memory",
+      "value": {
+        "limit": "4G"
+      }
+    }
+  ]
+}
