@@ -38,10 +38,13 @@ fi
 
 mkdir -p /etc/swarmer/certs
 base64 -d < /etc/swarmer/certs.tar.base64 | tar -C /etc/swarmer/certs -xf -
-cp /etc/swarmer/certs/cluster.crt /etc/ssl/certs/"$DATACENTER.$STACK_NAME".pem
+cp /etc/swarmer/certs/ca.pem /etc/ssl/certs/"$DATACENTER.$STACK_NAME".pem
 update-ca-certificates
 
 
 ADMIN_IP=$(gethostadminipaddr)
 # force resolving admin services on local box to enable consul check services
-echo "$ADMIN_IP swarm.service.$DATACENTER.$STACK_NAME consul.service.$DATACENTER.$STACK_NAME registry.service.$DATACENTER.${STACK_NAME}" | sudo tee -a /etc/hosts
+HOST_DEF="$ADMIN_IP $(hostname) $(hostname).node.$DATACENTER.$VAGRANT swarm.service.$DATACENTER.$STACK_NAME consul.service.$DATACENTER.$STACK_NAME registry.service.$DATACENTER.${STACK_NAME}"
+if [ "$(grep "$HOST_DEF" /etc/hosts)" != 0 ]; then
+    echo "$HOST_DEF" | sudo tee -a /etc/hosts
+fi

@@ -3,17 +3,15 @@ if [[ -f "/etc/swarmer/swarmer.conf" ]]; then
     source /etc/swarmer/swarmer.conf
 fi
 
-REGISTRY_VERSION=${REGISTRY_VERSION:-2}
-
 consul() {
     METHOD=$1
     shift
     path=$1
     shift
     curl --fail \
-         --cacert /etc/swarmer/certs/cluster.crt \
-         --cert /etc/swarmer/certs/client.crt \
-         --key /etc/swarmer/certs/client.key \
+         --cacert /etc/swarmer/certs/ca.pem \
+         --cert /etc/swarmer/certs/default.pem \
+         --key /etc/swarmer/certs/default-key.pem \
          -"X$METHOD" "https://consul.service.$DATACENTER.$STACK_NAME:8500/v1$path" "$@"
 }
 
@@ -96,10 +94,10 @@ start(){
         --mount volume=conf,target=/etc/docker/registry/config.yml \
         --volume certs,kind=host,source=/etc/swarmer/certs,readOnly=true \
         --mount volume=certs,target=/certs \
-        --set-env REGISTRY_HTTP_TLS_CERTIFICATE="/certs/control-registry.service.$DATACENTER.$STACK_NAME.crt" \
-        --set-env REGISTRY_HTTP_TLS_KEY="/certs/control-registry.service.$DATACENTER.$STACK_NAME.key" \
+        --set-env REGISTRY_HTTP_TLS_CERTIFICATE=/certs//certs/default.pem \
+        --set-env REGISTRY_HTTP_TLS_KEY=/certs/default-key.pem \
         --uuid-file-save /var/run/registry.uuid \
-        "registry-1.docker.io/library/registry:$REGISTRY_VERSION" --exec /bin/registry -- \
+        registry --exec /bin/registry -- \
         serve /etc/docker/registry/config.yml
 }
 
@@ -123,9 +121,9 @@ EOF
 
 check(){
     /usr/bin/curl --fail \
-         --cacert /etc/swarmer/certs/cluster.crt \
-         --cert /etc/swarmer/certs/client.crt \
-         --key /etc/swarmer/certs/client.key \
+         --cacert /etc/swarmer/certs/ca.pem \
+         --cert /etc/swarmer/certs/default.pem \
+         --key /etc/swarmer/certs/default-key.pem \
          -XGET "https://registry.service.$DATACENTER.${STACK_NAME}:5000/"
 }
 

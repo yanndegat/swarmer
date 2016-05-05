@@ -53,10 +53,10 @@ if [ $SWARM_MODE == "manager" ] || [ $SWARM_MODE == "both" ]; then
     CONSUL_SESSION_ID=$(curl -XPUT "http://localhost:8500/v1/session/create" \
                              -d '{"Name":"'$(hostname)'", "TTL": "120s", "LockDelay" : "120s"}' 2>/dev/null | jq '.ID' | sed 's/"//g' || exit 1)
 
-    LOCKED=$(cat /etc/flocker/cluster.crt | curl -XPUT "http://localhost:8500/v1/kv/swarmer/flocker-cluster-crt?acquire=$CONSUL_SESSION_ID" -d - 2>/dev/null || exit 1)
+    LOCKED=$(cat /etc/flocker/ca.pem | curl -XPUT "http://localhost:8500/v1/kv/swarmer/flocker-ca.pem?acquire=$CONSUL_SESSION_ID" -d - 2>/dev/null || exit 1)
 
     if [[ "$LOCKED" != "true" ]]; then
-        logger -s -p user.error "flocker-cluster-crt lock already acquired".
+        logger -s -p user.error "flocker-ca.pem lock already acquired".
         exit 1
     fi
 

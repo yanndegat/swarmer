@@ -37,6 +37,11 @@
       "destination" : "/tmp"
     },
     {
+      "type": "file",
+      "source": "./builds/docker-images/",
+      "destination" : "/tmp"
+    },
+    {
       "type": "shell",
       "scripts": [ "scripts/fini.sh" ]
     },

@@ -131,9 +131,9 @@ cat > $CONSUL_DATADIR/secure-conf.json <<EOF
       "http": -1,
       "https": 8500
     },
-    "ca_file": "/etc/swarmer/certs/cluster.crt",
-    "cert_file": "/etc/swarmer/certs/control-consul.service.$DATACENTER.$STACK_NAME.crt",
-    "key_file": "/etc/swarmer/certs/control-consul.service.$DATACENTER.$STACK_NAME.key",
+    "ca_file": "/etc/swarmer/certs/ca.pem",
+    "cert_file": "/etc/swarmer/certs/default.pem",
+    "key_file": "/etc/swarmer/certs/default-key.pem",
     "verify_incoming": true,
     "verify_outgoing": true,
     "log_level": "INFO"

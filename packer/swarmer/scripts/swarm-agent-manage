@@ -5,7 +5,6 @@ fi
 
 SWARM_CONTAINER_NAME=${SWARM_CONTAINER_NAME:-swarm}
 SWARM_MODE=${SWARM_MODE:-both}
-SWARM_VERSION=${SWARM_VERSION:-1.1.3}
 ADMIN_NETWORK=${ADMIN_NETWORK:-default}
 STACK_NAME=${STACK_NAME:-swarmer}
 verbose=0
@@ -31,27 +30,8 @@ OPTIONS:
 EOF
 }
 
-gethostadminipaddr(){
-    # Keep trying to retrieve IP addr until it succeeds. Timeouts after 1m
-    now=$(date +%s)
-    timeout=$(( now + 60 ))
-    set +e
-    while :; do
-        if [[ $timeout -lt $(date +%s) ]]; then
-            log user.error "Could not retrieve IP Address. Exiting"
-            exit 1
-        fi
-        ip route | grep -q "^$ADMIN_NETWORK"
-        [ $? -eq 0 ] && break
-        sleep 1
-    done
-
-    ip route | grep "^$ADMIN_NETWORK" | sed 's/.*src \([0-9\.]*\) .*/\1/g'
-}
-
 start(){
     log user.info "start"
-    IP=$(gethostadminipaddr)
     rkt run \
         --volume hosts,kind=host,source=/etc/hosts,readOnly=true \
         --volume certs,kind=host,source=/etc/swarmer/certs,readOnly=true \
@@ -60,11 +40,11 @@ start(){
         --mount volume=certs,target=/certs \
         --mount volume=data,target=/.swarm \
         --uuid-file-save /var/run/swarm-agent.uuid \
-        "registry-1.docker.io/library/swarm:$SWARM_VERSION" --exec /swarm -- \
-        join --advertise "$IP":2376 \
-        --discovery-opt kv.cacertfile=/certs/cluster.crt \
-        --discovery-opt kv.certfile=/certs/client.crt \
-        --discovery-opt kv.keyfile=/certs/client.key \
+        swarm --exec /swarm -- \
+        join --advertise "$(hostname).node.$DATACENTER.$STACK_NAME":2376 \
+        --discovery-opt kv.cacertfile=/certs/ca.pem \
+        --discovery-opt kv.certfile=/certs/docker.pem \
+        --discovery-opt kv.keyfile=/certs/docker-key.pem \
         "consul://consul.service.$DATACENTER.$STACK_NAME:8500/swarm"
 }
 

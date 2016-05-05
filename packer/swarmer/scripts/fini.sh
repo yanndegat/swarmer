@@ -3,19 +3,27 @@
 CONSUL_VERSION=0.6.4
 
 #DOWNLOADS
+wget -O /tmp/docker2aci.tar.gz https://github.com/appc/docker2aci/releases/download/v0.9.3/docker2aci-v0.9.3.tar.gz
+wget -O /tmp/consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
+wget -O /tmp/config.yml https://raw.githubusercontent.com/docker/distribution/master/cmd/registry/config-example.yml
+curl -sSL https://dl.bintray.com/emccode/rexray/install > /tmp/install-rexray.sh
+
+#PREPARE IMAGES
+pushd "/tmp"
+tar -xzf ./docker2aci.tar.gz
+for i in ./*.docker; do
+    if [ -f "$i" ]; then
+        ./docker2aci-v0.9.3/docker2aci "$i"
+        rkt fetch --insecure-options=image "${i%*.docker}.aci"
+        rm "$i"
+    fi
+done
+
 #rkt fetch --insecure-options=image docker://flocker-control-service:latest
 #rkt fetch --insecure-options=image docker://flocker-container-agent:latest
 #rkt fetch --insecure-options=image docker://flocker-dataset-agent:latest
 #rkt fetch --insecure-options=image docker://flocker-docker-plugin:latest
-
-rkt fetch --insecure-options=image docker://andyshinn/dnsmasq:2.75
-rkt fetch --insecure-options=image docker://swarm:1.1.3
-rkt fetch --insecure-options=image docker://registry:2
-rkt fetch --insecure-options=image docker://cyprien/registrator:latest
-
-wget -O /tmp/consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
-wget -O /tmp/config.yml https://raw.githubusercontent.com/docker/distribution/master/cmd/registry/config-example.yml
-curl -sSL https://dl.bintray.com/emccode/rexray/install > /tmp/install-rexray.sh
+popd
 
 #CREATE DIRS
 sudo mkdir -p /opt/swarmer

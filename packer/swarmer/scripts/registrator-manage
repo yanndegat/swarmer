@@ -3,7 +3,6 @@ if [[ -f "/etc/swarmer/swarmer.conf" ]]; then
     source /etc/swarmer/swarmer.conf
 fi
 
-REGISTRATOR_VERSION="latest"
 ADMIN_NETWORK=${ADMIN_NETWORK:-default}
 PUBLIC_NETWORK=${PUBLIC_NETWORK:-default}
 verbose=0
@@ -73,9 +72,9 @@ start(){
     rkt run \
         --volume hosts,kind=host,source=/etc/hosts,readOnly=true \
         --volume dockersocket,kind=host,source=/var/run/docker.sock,readOnly=true \
-        --volume cacert,kind=host,source=/etc/swarmer/certs/cluster.crt,readOnly=true \
-        --volume cert,kind=host,source=/etc/swarmer/certs/client.crt,readOnly=true \
-        --volume key,kind=host,source=/etc/swarmer/certs/client.key,readOnly=true \
+        --volume cacert,kind=host,source=/etc/swarmer/certs/ca.pem,readOnly=true \
+        --volume cert,kind=host,source=/etc/swarmer/certs/default.pem,readOnly=true \
+        --volume key,kind=host,source=/etc/swarmer/certs/default-key.pem,readOnly=true \
         --mount volume=hosts,target=/etc/hosts \
         --mount volume=dockersocket,target=/tmp/docker.sock \
         --mount volume=cacert,target=/tmp/cacert \
@@ -87,7 +86,7 @@ start(){
         --set-env CONSUL_CACERT=/tmp/cacert \
         --set-env CONSUL_TLSCERT=/tmp/cert \
         --set-env CONSUL_TLSKEY=/tmp/key \
-        "registry-1.docker.io/cyprien/registrator:$REGISTRATOR_VERSION" --exec /bin/registrator -- \
+        cyprien/registrator --exec /bin/registrator -- \
         -ip="$(getpubipaddr)" -resync 10 -ttl 10 -ttl-refresh 5 "consul-tls://consul.service.$DATACENTER.$STACK_NAME:8500"
 }
 

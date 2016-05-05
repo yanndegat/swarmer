@@ -17,9 +17,9 @@ sudo mkdir /etc/flocker
 
 TMPFILE=$(mktemp)
 
-curl -XGET --fail "http://localhost:8500/v1/kv/swarmer/flocker-cluster-crt" | jq '.[0].Value' | sed 's/"//g"' | base64 -d > $TMPFILE || exit 1
+curl -XGET --fail "http://localhost:8500/v1/kv/swarmer/flocker-ca.pem" | jq '.[0].Value' | sed 's/"//g"' | base64 -d > $TMPFILE || exit 1
 
-sudo mv $TMPFILE /etc/flocker/cluster.crt
+sudo mv $TMPFILE /etc/flocker/ca.pem
 
 RKT_FLOCKER_OPTS="--insecure-options=image run --volume conf,kind=host,source=/etc/flocker docker://yanndegat/flocker-tools --mount volume=conf,target=/flocker --exec /bin/bash"
 sudo rkt $RKT_FLOCKER_OPTS -- -c "cd /flocker && /usr/local/bin/flocker-ca create-node-certificate"

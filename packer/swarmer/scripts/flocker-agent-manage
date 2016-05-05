@@ -42,9 +42,9 @@ EOF
 }
 
 start() {
-    if [ ! -f $CONF_DIR/cluster.crt ] \
-       || [ ! -f $CONF_DIR/client.crt ] \
-       || [ ! -f $CONF_DIR/client.key ] \
+    if [ ! -f $CONF_DIR/ca.pem ] \
+       || [ ! -f $CONF_DIR/client.pem ] \
+       || [ ! -f $CONF_DIR/client-key.pem ] \
        || [ ! -f $CONF_DIR/control-service.crt ] \
        || [ ! -f $CONF_DIR/control-service.key ]; then
         log.error "flocker not initialized. run flocker-control-manage init"
@@ -67,23 +67,23 @@ stop() {
 check(){
     sudo curl \
          --fail \
-         --cacert $CONF_DIR/cluster.crt \
-         --cert $CONF_DIR/client.crt \
-         --key $CONF_DIR/client.key \
+         --cacert $CONF_DIR/ca.pem \
+         --cert $CONF_DIR/client.pem \
+         --key $CONF_DIR/client-key.pem \
          "https://flocker-control.service.$DATACENTER.${STACK_NAME}:4523/v1/version" > /dev/null 2>&1
 }
 
 init() {
     TMPFILE=$(mktemp)
-    curl -XGET --fail "http://localhost:8500/v1/kv/swarmer/flocker-cluster-crt" | jq '.[0].Value' | sed 's/"//g"' | base64 -d > $TMPFILE
+    curl -XGET --fail "http://localhost:8500/v1/kv/swarmer/flocker-ca.pem" | jq '.[0].Value' | sed 's/"//g"' | base64 -d > $TMPFILE
 
     if [ $? != 0 ]; then
-        log user.error "cluster.crt unavailable in consul."
+        log user.error "ca.pem unavailable in consul."
         exit 1
     fi
 
     mkdir -p $CONF_DIR $LIB_DIR
-    mv $TMPFILE $CONF_DIR/cluster.crt
+    mv $TMPFILE $CONF_DIR/ca.pem
 
     log user.info "generate flocker controller certificates"
     TMPDIR=$(mktemp -d)
@@ -94,16 +94,16 @@ init() {
 
     sudo mv $TMPDIR/control-flocker-control.service.swarmer.key $CONF_DIR/control-service.key
     sudo mv $TMPDIR/control-flocker-control.service.swarmer.crt $CONF_DIR/control-service.crt
-    sudo mv $TMPDIR/client.key $CONF_DIR/client.key
-    sudo mv $TMPDIR/client.crt $CONF_DIR/client.crt
-    sudo mv $TMPDIR/cluster.crt $CONF_DIR/cluster.crt
+    sudo mv $TMPDIR/client-key.pem $CONF_DIR/client-key.pem
+    sudo mv $TMPDIR/client.pem $CONF_DIR/client.pem
+    sudo mv $TMPDIR/ca.pem $CONF_DIR/ca.pem
     sudo chmod 0700 $CONF_DIR
-    sudo chmod 0600 $CONF_DIR/control-service.key $CONF_DIR/client.key
+    sudo chmod 0600 $CONF_DIR/control-service.key $CONF_DIR/client-key.pem
     rm -Rf $TMPDIR
 
     #Upload cluster certificate to consul to make it available for agent nodes
     log user.info "upload flocker cluster certificate to consul"
-    sudo cat $CONF_DIR/cluster.crt | curl -XPUT "http://localhost:8500/v1/kv/swarmer/flocker-cluster-crt" -d - > /dev/null 2>&1 || exit 1
+    sudo cat $CONF_DIR/ca.pem | curl -XPUT "http://localhost:8500/v1/kv/swarmer/flocker-ca.pem" -d - > /dev/null 2>&1 || exit 1
 }
 
 if [ ! /etc/swarmer/swarmer.conf ]; then

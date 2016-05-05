@@ -2,7 +2,7 @@
 if [[ -f "/etc/swarmer/swarmer.conf" ]]; then
     source /etc/swarmer/swarmer.conf
 fi
-IMAGE_NAME=registry-1.docker.io/andyshinn/dnsmasq:2.75
+IMAGE_NAME=andyshinn/dnsmasq:2.75
 STACK_NAME=${STACK_NAME:-swarmer}
 DNSMASQ_ACI_ID=$(rkt image list --no-legend --fields id,name | grep "$IMAGE_NAME" | awk '{print $1}')
 ADMIN_NETWORK=${ADMIN_NETWORK:-default}

@@ -10,9 +10,9 @@ if [ -z "$STACK" ] || [ -z "$DATACENTER" ]; then
     echo "usage: $BASEDIR/consul STACK DATACENTER GET|PUT|POST|DELETE CONSUL_PATH [ARGS]"
 fi
 
-CERTDIR="$HOME/.swarmer/$STACK/$DATACENTER"
-curl --fail \
+CERTDIR="$HOME/.swarmer/vagrant/dev"
+curl -k --fail \
      --cacert "$CERTDIR/ca.pem" \
      --cert "$CERTDIR/default.pem" \
      --key "$CERTDIR/default-key.pem" \
-     -"X$METHOD" "https://consul.service.$DATACENTER.$STACK:8500/v1$path" "$@"
+     -"X$METHOD" "https://192.168.101.101:8500/v1$path" "$@"
