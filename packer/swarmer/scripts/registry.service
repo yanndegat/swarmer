@@ -10,6 +10,7 @@ ExecStartPre=/opt/swarmer/registry-manage consul-lock
 ExecStart=/opt/swarmer/registry-manage start
 ExecStartPost=/opt/swarmer/registry-manage register
 ExecStartPost=/opt/swarmer/registry-manage consul-unlock
+ExecStopPre=/opt/swarmer/registry-manage deregister
 ExecStop=/opt/swarmer/registry-manage stop
 [Install]
 WantedBy=default.target

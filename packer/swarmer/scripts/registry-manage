@@ -61,13 +61,14 @@ log(){
 # Usage info
 show_help() {
 cat << EOF
-Usage: ${0##*/} [-hv] start|stop|check|register
+Usage: ${0##*/} [-hv] start|stop|check|register|deregister
 Handles the lifecycle of a docker registry
 
 COMMANDS:
     start              Starts a docker registry
     stop               Stops a docker registry
     register           Registers registry in consul
+    deregister         Deregisters registry in consul
     check              Checks if registry is running
     consul-lock        Puts a lock in consul
     consul-unlock      Removes a lock in consul
@@ -94,7 +95,7 @@ start(){
         --mount volume=conf,target=/etc/docker/registry/config.yml \
         --volume certs,kind=host,source=/etc/swarmer/certs,readOnly=true \
         --mount volume=certs,target=/certs \
-        --set-env REGISTRY_HTTP_TLS_CERTIFICATE=/certs//certs/default.pem \
+        --set-env REGISTRY_HTTP_TLS_CERTIFICATE=/certs/default.pem \
         --set-env REGISTRY_HTTP_TLS_KEY=/certs/default-key.pem \
         --uuid-file-save /var/run/registry.uuid \
         registry --exec /bin/registry -- \
@@ -106,6 +107,7 @@ register(){
     TMPFILE=$(mktemp)
     cat > "$TMPFILE" <<EOF
 {
+  "ID":"registry-$(hostname)",
   "Name": "registry",
   "Address": "$IP",
   "Port": 5000,
@@ -117,6 +119,10 @@ register(){
 EOF
     consul PUT "/agent/service/register" -d @"$TMPFILE" 2>/dev/null
     rm "$TMPFILE"
+}
+
+deregister(){
+    consul PUT "/agent/service/deregister/registry-$(hostname)" 2>/dev/null
 }
 
 check(){
@@ -172,6 +178,9 @@ case $1 in
         ;;
     register)
         register
+        ;;
+    deregister)
+        deregister
         ;;
     *)
         check

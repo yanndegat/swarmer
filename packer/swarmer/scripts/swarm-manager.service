@@ -7,4 +7,5 @@ After=docker.service consul.service
 Restart=on-failure
 ExecStart=/opt/swarmer/swarm-manager-manage start
 ExecStartPost=/opt/swarmer/swarm-manager-manage register
+ExecStopPre=/opt/swarmer/swarm-manager-manage deregister
 ExecStop=/opt/swarmer/swarm-manager-manage stop

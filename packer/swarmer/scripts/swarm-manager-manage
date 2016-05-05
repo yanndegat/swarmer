@@ -16,7 +16,7 @@ log(){
 # Usage info
 show_help() {
 cat << EOF
-Usage: ${0##*/} [-hv] start|stop|check|register|engine-ops
+Usage: ${0##*/} [-hv] start|stop|check|register|deregister|engine-ops
 Handles the lifecycle of a swarm manager
 
 COMMANDS:
@@ -24,6 +24,7 @@ COMMANDS:
     stop               Stops a swarm manager
     engine-opts        Echo engine opts
     register           Registers manager in consul
+    deregister         Deregisters manager in consul
     check              Checks if manager is running
 
 OPTIONS:
@@ -53,7 +54,7 @@ gethostadminipaddr(){
 
 engine_opts(){
     IP=$(gethostadminipaddr)
-    echo "-H tcp://$IP:2376 --tls --tlscacert=/etc/swarmer/certs/ca.pem --tlscert=/etc/swarmer/certs/docker.pem --tlskey=/etc/swarmer/certs/docker-key.pem --cluster-store=consul://consul.service.$DATACENTER.$STACK_NAME:8500 --cluster-store-opt kv.cacertfile=/etc/swarmer/certs/ca.pem --cluster-store-opt kv.certfile=/etc/swarmer/certs/default.pem --cluster-store-opt kv.keyfile=/etc/swarmer/certs/default-key.pem --cluster-advertise=$IP:2376"
+    echo "-H tcp://$IP:2376 --tlsverify --tlscacert=/etc/swarmer/certs/ca.pem --tlscert=/etc/swarmer/certs/docker.pem --tlskey=/etc/swarmer/certs/docker-key.pem --cluster-store=consul://consul.service.$DATACENTER.$STACK_NAME:8500 --cluster-store-opt kv.cacertfile=/etc/swarmer/certs/ca.pem --cluster-store-opt kv.certfile=/etc/swarmer/certs/default.pem --cluster-store-opt kv.keyfile=/etc/swarmer/certs/default-key.pem --cluster-advertise=$IP:2376"
 }
 
 start(){
@@ -69,8 +70,8 @@ start(){
         --mount volume=data,target=/.swarm \
         --uuid-file-save /var/run/swarm-manager.uuid \
         swarm --exec /swarm -- \
-        manage --host 0.0.0.0:4000 --replication --advertise "$IP":4000 \
-        --tls \
+        manage --host 0.0.0.0:4000 --replication --advertise "$(hostname).node.$DATACENTER.$STACK_NAME":4000 \
+        --tlsverify \
         --tlscacert=/certs/ca.pem \
         --tlscert=/certs/docker.pem \
         --tlskey=/certs/docker-key.pem \
@@ -85,6 +86,7 @@ register(){
     TMPFILE=$(mktemp)
     cat > "$TMPFILE" <<EOF
 {
+  "ID":"swarm-$(hostname)",
   "Name": "swarm",
   "Address": "$IP",
   "Port": 4000,
@@ -100,6 +102,12 @@ EOF
          --key /etc/swarmer/certs/default-key.pem \
          -XPUT "https://consul.service.$DATACENTER.$STACK_NAME:8500/v1/agent/service/register" -d @"$TMPFILE" 2>/dev/null
     rm "$TMPFILE"
+}
+
+
+deregister(){
+    #deregisters in consul
+    consul PUT "/agent/service/deregister/swarm-$(hostname)" 2>/dev/null
 }
 
 check(){
@@ -157,6 +165,9 @@ case $1 in
         ;;
     register)
         register
+        ;;
+    deregister)
+        deregister
         ;;
     *)
         check

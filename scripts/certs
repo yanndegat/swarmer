@@ -24,7 +24,7 @@ echo '{"signing":{"default":{"expiry":"100000h","usages":["signing","client auth
 echo '{"CN":"$DATACENTER $STACK default","hosts":["consul.service.dev.vagrant","registry.service.dev.vagrant","swarm.service.dev.vagrant"],"key":{"algo":"rsa","size":4096}}' | cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=req-docker.json - | cfssljson -bare docker
 
 echo '{"signing":{"default":{"expiry":"100000h","usages":["signing","server auth","client auth"]}}}' > req-default.json
-echo '{"CN":"$DATACENTER $STACK default","hosts":["consul.service.dev.vagrant","registry.service.dev.vagrant","swarm.service.dev.vagrant"],"key":{"algo":"rsa","size":4096}}' | cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=req-default.json - | cfssljson -bare default
+echo '{"CN":"$DATACENTER $STACK default","hosts":["swarm-01.node.dev.vagrant","swarm-02.node.dev.vagrant","swarm-03.node.dev.vagrant","consul.service.dev.vagrant","registry.service.dev.vagrant","swarm.service.dev.vagrant"],"key":{"algo":"rsa","size":4096}}' | cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=req-default.json - | cfssljson -bare default
 
 #echo '{"CN":"","hosts":[],"key":{"algo":"rsa","size":2048}}' | cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json - | cfssljson -bare client
 EOF
@@ -37,9 +37,7 @@ find "$CERTDIR" -type f -exec chmod 0600 {} \;
 
 pushd "$CERTDIR" >/dev/null
 
-# We don't want to ship the cacert with the tarball.
-# Plus no one should be able to create new certs.
-rm -f ca-key.pem run.sh
+rm -f run.sh
 cp default.pem docker.pem
 cp default-key.pem docker-key.pem
 echo "Generating PKCS12 cert to use in browser"
