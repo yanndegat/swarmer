@@ -6,7 +6,6 @@ CONSUL_VERSION=0.6.4
 wget -O /tmp/docker2aci.tar.gz https://github.com/appc/docker2aci/releases/download/v0.9.3/docker2aci-v0.9.3.tar.gz
 wget -O /tmp/consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
 wget -O /tmp/config.yml https://raw.githubusercontent.com/docker/distribution/master/cmd/registry/config-example.yml
-curl -sSL https://dl.bintray.com/emccode/rexray/install > /tmp/install-rexray.sh
 
 #PREPARE IMAGES
 pushd "/tmp"
@@ -51,8 +50,6 @@ sudo mv /tmp/swarmer.path /etc/systemd/system/
 
 sudo mv /tmp/config.yml /etc/docker/registry
 sudo mv /tmp/60-swarm.conf /etc/swarmer/docker.conf.d/
-chmod +x /tmp/install-rexray.sh
-/tmp/install-rexray.sh
 
 # SETUP SYSTEMD
 sudo systemctl enable swarmer.path

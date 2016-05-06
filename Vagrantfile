@@ -17,17 +17,6 @@ Vagrant.configure("2") do |config|
   consul_joinip = servers.first['priv_ip']
   host_ip = Socket.ip_address_list.find { |ai| ai.ipv4? && !ai.ipv4_loopback? }.ip_address
   cacerts_archive = IO.read("./vagrant.d/certs.dev.vagrant.tar.base64").split("\n").collect{|line| "     #{line}"}.join("\n")
-  vol_dir="#{Dir.pwd}/vbox_volumes"
-
-  # Start vbox remote control server
-  if ARGV[0] == 'up' || ARGV[0] == 'destroy'
-    system "killall vboxwebsrv"
-  end
-  if ARGV[0] == 'up'
-    system "mkdir -p #{vol_dir}"
-    system "VBoxManage setproperty websrvauthlibrary null"
-    system "vboxwebsrv -H 0.0.0.0 -b"
-  end
 
   # Always use Vagrant's default insecure key
   config.ssh.insert_key = false
@@ -44,16 +33,6 @@ Vagrant.configure("2") do |config|
 ssh_authorized_keys:
   - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
 write_files:
-  - path: "/etc/rexray/config.yml"
-    permissions: "0644"
-    owner: "root"
-    content: |
-      rexray:
-        storageDrivers:
-          - virtualbox
-      virtualbox:
-        endpoint: http://#{host_ip}:18083
-        volumePath: "#{vol_dir}"
   - path: "/etc/swarmer/swarmer.conf"
     permissions: "0644"
     owner: "root"
@@ -64,7 +43,7 @@ write_files:
       export ADMIN_NETWORK="#{admin_network}"
       export PUBLIC_NETWORK="#{admin_network}"
       export SWARM_MODE="both"
-      export VOLUME_DRIVER=rexray
+      export VOLUME_DRIVER=none
       export STACK_NAME=vagrant
       export DATACENTER=dev
       # key genererated via command "consul keygen"
