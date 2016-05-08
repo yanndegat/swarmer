@@ -70,12 +70,11 @@ gethostadminipaddr(){
 start(){
     log user.info "start"
     rkt run \
-        --volume hosts,kind=host,source=/etc/hosts,readOnly=true \
+        --dns "$(gethostadminipaddr)" \
         --volume dockersocket,kind=host,source=/var/run/docker.sock,readOnly=true \
         --volume cacert,kind=host,source=/etc/swarmer/certs/ca.pem,readOnly=true \
-        --volume cert,kind=host,source=/etc/swarmer/certs/default.pem,readOnly=true \
-        --volume key,kind=host,source=/etc/swarmer/certs/default-key.pem,readOnly=true \
-        --mount volume=hosts,target=/etc/hosts \
+        --volume cert,kind=host,source=/etc/swarmer/certs/node.pem,readOnly=true \
+        --volume key,kind=host,source=/etc/swarmer/certs/node-key.pem,readOnly=true \
         --mount volume=dockersocket,target=/tmp/docker.sock \
         --mount volume=cacert,target=/tmp/cacert \
         --mount volume=cert,target=/tmp/cert \

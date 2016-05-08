@@ -13,6 +13,6 @@ fi
 CERTDIR="$HOME/.swarmer/$STACK/$DATACENTER"
 curl --fail \
      --cacert "$CERTDIR/ca.pem" \
-     --cert "$CERTDIR/default.pem" \
-     --key "$CERTDIR/default-key.pem" \
+     --cert "$CERTDIR/client-192.168.101.1.pem" \
+     --key "$CERTDIR/client-192.168.101.1-key.pem" \
      -"X$METHOD" "https://consul.service.$DATACENTER.$STACK:8500/v1$path" "$@"

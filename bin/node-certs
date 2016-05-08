@@ -1,0 +1,39 @@
+#!/bin/bash -e
+BASEDIR=$(readlink -f "$(dirname "$0")")
+STACK="$1"
+DATACENTER="$2"
+shift 2
+HOSTS=($@)
+
+if [ -z "$STACK" ] || [ -z "$DATACENTER" ]; then
+    echo "usage: $BASEDIR/swarmer.sh STACK DATACENTER [HOST1] [HOST2] ... [HOSTN]"
+    echo "It will generate a keypair for each host in the $HOME/.swarmer/STACK/DATACENTER directory."
+    exit 1
+fi
+
+CERTDIR="$HOME/.swarmer/$STACK/$DATACENTER"
+
+if [ ! -d "$CERTDIR" ]; then
+    echo "$CERTDIR doesn't exists. Please run init-certs."
+    exit 1
+fi
+
+if [ ! -f "$CERTDIR/ca.pem" ] || [ ! -f "$CERTDIR/ca-key.pem" ]; then
+    echo "CACERT keypair doesn't exists. Please run init-certs."
+    exit 1
+fi
+
+for i in "${HOSTS[@]}"; do
+    cat >> "$CERTDIR"/run.sh <<EOF
+cd /certs
+echo '{"signing":{"default":{"expiry":"100000h","usages":["signing","server auth","client auth"]}}}' > req.json
+echo '{"CN":"$DATACENTER $STACK default","hosts":["$i.node.dev.vagrant","consul.service.dev.vagrant","registry.service.dev.vagrant","swarm.service.dev.vagrant"],"key":{"algo":"rsa","size":4096}}' | cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=req.json - | cfssljson -bare "$i"
+EOF
+done
+
+chmod +x "$CERTDIR/run.sh"
+docker run --rm -v "$CERTDIR":/certs --entrypoint /bin/bash cfssl/cfssl -c "/certs/run.sh > /dev/null"
+sudo chown -R "$USER":"$USER" "$CERTDIR"
+find "$CERTDIR" -type f -exec chmod 0600 {} \;
+rm -f "$CERTDIR/run.sh"
+echo "node certs are in $(readlink -f "$CERTDIR")"

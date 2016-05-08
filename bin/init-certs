@@ -1,0 +1,36 @@
+#!/bin/bash -e
+BASEDIR=$(readlink -f "$(dirname "$0")")
+STACK="$1"
+DATACENTER="$2"
+CLIENTIP="$3"
+
+if [ -z "$STACK" ] || [ -z "$DATACENTER" ]; then
+    echo "usage: $BASEDIR/swarmer.sh STACK DATACENTER CLIENTIP"
+    echo "It will generate the CA cert and a client keypair in the $HOME/.swarmer/STACK/DATACENTER directory."
+    exit 1
+fi
+
+CERTDIR="$HOME/.swarmer/$STACK/$DATACENTER"
+mkdir -p "$CERTDIR"
+
+if [ ! -z "$(find "$CERTDIR" -type f)" ]; then
+    echo "$CERTDIR is not empty. Aborting."
+    exit 1
+fi
+
+cat > "$CERTDIR"/run.sh <<EOF
+cd /certs
+echo '{"CN":"$DATACENTER $STACK","key":{"algo":"rsa","size":4096}}' | cfssl gencert -initca - | cfssljson -bare ca -
+echo '{"signing":{"default":{"expiry":"100000h","usages":["signing","server auth","client auth"]}}}' > req.json
+echo '{"CN":"$DATACENTER $STACK client","hosts":["$CLIENTIP"],"key":{"algo":"rsa","size":2048}}' | cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=req.json - | cfssljson -bare "client"
+EOF
+
+chmod +x "$CERTDIR/run.sh"
+docker run --rm -v "$CERTDIR":/certs --entrypoint /bin/bash cfssl/cfssl -c "/certs/run.sh "
+
+sudo chown -R "$USER":"$USER" "$CERTDIR"
+find "$CERTDIR" -type f -exec chmod 0600 {} \;
+rm -f "$CERTDIR/run.sh"
+echo "Generating PKCS12 cert to use in browser"
+openssl pkcs12 -inkey "$CERTDIR/client-$CLIENTIP-key.pem" -in "$CERTDIR/client-$CLIENTIP.pem" -export -out "$CERTDIR/client-$CLIENTIP.pfx"
+echo "certs are in $(readlink -f "$CERTDIR")"

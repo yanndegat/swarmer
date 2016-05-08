@@ -5,7 +5,8 @@ Requires=docker.service consul.service
 After=docker.service consul.service
 [Service]
 Restart=on-failure
+RestartSec=10s
 ExecStart=/opt/swarmer/swarm-manager-manage start
 ExecStartPost=/opt/swarmer/swarm-manager-manage register
-ExecStopPre=/opt/swarmer/swarm-manager-manage deregister
+ExecStopPost=/opt/swarmer/swarm-manager-manage deregister
 ExecStop=/opt/swarmer/swarm-manager-manage stop

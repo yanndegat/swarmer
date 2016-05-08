@@ -1,0 +1,64 @@
+#!/bin/bash -e
+BASEDIR=$(readlink -f "$(dirname "$0")")
+STACK="$1"
+DATACENTER="$2"
+CLIENTIP="$3"
+shift 3
+HOSTS=($@)
+
+if [ -z "$STACK" ] || [ -z "$DATACENTER" ]; then
+    echo "usage: $BASEDIR/swarmer.sh STACK DATACENTER [CLIENTIP] [HOST1] [HOST2] ... [HOSTN]"
+    echo "It will generate the CA cert, a keypair for each host and a client keypair in the $HOME/.swarmer/STACK/DATACENTER directory."
+    exit 1
+fi
+
+CERTDIR="$HOME/.swarmer/$STACK/$DATACENTER"
+mkdir -p "$CERTDIR"
+
+if [ ! -z "$(find "$CERTDIR" -type f)" ]; then
+    echo "$CERTDIR is not empty. Aborting."
+    exit 1
+fi
+
+cat > "$CERTDIR"/run.sh <<EOF
+cd /certs
+echo '{"CN":"$DATACENTER $STACK","key":{"algo":"rsa","size":4096}}' | cfssl gencert -initca - | cfssljson -bare ca -
+EOF
+
+if [ ! -z "$CLIENTIP" ]; then
+    cat >> "$CERTDIR"/run.sh <<EOF
+cd /certs
+echo '{"CN":"$DATACENTER $STACK client","hosts":["$CLIENTIP"],"key":{"algo":"rsa","size":2048}}' | cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json - | cfssljson -bare "client-$CLIENTIP"
+EOF
+fi
+
+for i in "${HOSTS[@]}"; do
+    cat >> "$CERTDIR"/run.sh <<EOF
+cd /certs
+echo '{"signing":{"default":{"expiry":"100000h","usages":["signing","server auth","client auth"]}}}' > req.json
+echo '{"CN":"$DATACENTER $STACK default","hosts":["$i.node.dev.vagrant","consul.service.dev.vagrant","registry.service.dev.vagrant","swarm.service.dev.vagrant"],"key":{"algo":"rsa","size":4096}}' | cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=req.json - | cfssljson -bare "$i"
+EOF
+done
+
+
+chmod +x "$CERTDIR/run.sh"
+docker run --rm -v "$CERTDIR":/certs --entrypoint /bin/bash cfssl/cfssl -c "/certs/run.sh > /dev/null"
+
+sudo chown -R "$USER":"$USER" "$CERTDIR"
+find "$CERTDIR" -type f -exec chmod 0600 {} \;
+
+pushd "$CERTDIR" >/dev/null
+
+rm -f run.sh
+cp default.pem docker.pem
+cp default-key.pem docker-key.pem
+echo "Generating PKCS12 cert to use in browser"
+openssl pkcs12 -inkey default-key.pem -in default.pem -export -out default.pfx
+tar -cf "./certs.tar" ./*.pem
+popd >/dev/null
+
+base64 > "$CERTDIR/certs.$DATACENTER.$STACK.tar.base64" < "$CERTDIR/certs.tar"
+
+rm "$CERTDIR/certs.tar"
+
+echo "certs are in $(readlink -f "$CERTDIR")"

@@ -10,8 +10,8 @@ consul() {
     shift
     curl --fail \
          --cacert /etc/swarmer/certs/ca.pem \
-         --cert /etc/swarmer/certs/default.pem \
-         --key /etc/swarmer/certs/default-key.pem \
+         --cert /etc/swarmer/certs/node.pem \
+         --key /etc/swarmer/certs/node-key.pem \
          -"X$METHOD" "https://consul.service.$DATACENTER.$STACK_NAME:8500/v1$path" "$@"
 }
 
@@ -95,8 +95,8 @@ start(){
         --mount volume=conf,target=/etc/docker/registry/config.yml \
         --volume certs,kind=host,source=/etc/swarmer/certs,readOnly=true \
         --mount volume=certs,target=/certs \
-        --set-env REGISTRY_HTTP_TLS_CERTIFICATE=/certs/default.pem \
-        --set-env REGISTRY_HTTP_TLS_KEY=/certs/default-key.pem \
+        --set-env REGISTRY_HTTP_TLS_CERTIFICATE=/certs/node.pem \
+        --set-env REGISTRY_HTTP_TLS_KEY=/certs/node-key.pem \
         --uuid-file-save /var/run/registry.uuid \
         registry --exec /bin/registry -- \
         serve /etc/docker/registry/config.yml
@@ -122,15 +122,15 @@ EOF
 }
 
 deregister(){
-    consul PUT "/agent/service/deregister/registry-$(hostname)" 2>/dev/null
+    consul GET "/agent/service/deregister/registry-$(hostname)" 2>/dev/null
 }
 
 check(){
     /usr/bin/curl --fail \
          --cacert /etc/swarmer/certs/ca.pem \
-         --cert /etc/swarmer/certs/default.pem \
-         --key /etc/swarmer/certs/default-key.pem \
-         -XGET "https://registry.service.$DATACENTER.${STACK_NAME}:5000/"
+         --cert /etc/swarmer/certs/node.pem \
+         --key /etc/swarmer/certs/node-key.pem \
+         -XGET "https://$(hostname).node.$DATACENTER.$STACK_NAME:5000/"
 }
 
 stop() {

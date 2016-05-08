@@ -54,7 +54,7 @@ gethostadminipaddr(){
 
 engine_opts(){
     IP=$(gethostadminipaddr)
-    echo "-H tcp://$IP:2376 --tlsverify --tlscacert=/etc/swarmer/certs/ca.pem --tlscert=/etc/swarmer/certs/docker.pem --tlskey=/etc/swarmer/certs/docker-key.pem --cluster-store=consul://consul.service.$DATACENTER.$STACK_NAME:8500 --cluster-store-opt kv.cacertfile=/etc/swarmer/certs/ca.pem --cluster-store-opt kv.certfile=/etc/swarmer/certs/default.pem --cluster-store-opt kv.keyfile=/etc/swarmer/certs/default-key.pem --cluster-advertise=$IP:2376"
+    echo "-H tcp://$IP:2376 --tlsverify --tlscacert=/etc/swarmer/certs/ca.pem --tlscert=/etc/swarmer/certs/node.pem --tlskey=/etc/swarmer/certs/node-key.pem --cluster-store=consul://consul.service.$DATACENTER.$STACK_NAME:8500 --cluster-store-opt kv.cacertfile=/etc/swarmer/certs/ca.pem --cluster-store-opt kv.certfile=/etc/swarmer/certs/node.pem --cluster-store-opt kv.keyfile=/etc/swarmer/certs/node-key.pem --cluster-advertise=$IP:2376"
 }
 
 start(){
@@ -62,10 +62,8 @@ start(){
     IP=$(gethostadminipaddr)
     rkt run \
         --net=host \
-        --volume hosts,kind=host,source=/etc/hosts,readOnly=true \
         --volume certs,kind=host,source=/etc/swarmer/certs,readOnly=true \
         --volume data,kind=host,source=/var/lib/swarm-manager,readOnly=false \
-        --mount volume=hosts,target=/etc/hosts \
         --mount volume=certs,target=/certs \
         --mount volume=data,target=/.swarm \
         --uuid-file-save /var/run/swarm-manager.uuid \
@@ -73,11 +71,11 @@ start(){
         manage --host 0.0.0.0:4000 --replication --advertise "$(hostname).node.$DATACENTER.$STACK_NAME":4000 \
         --tlsverify \
         --tlscacert=/certs/ca.pem \
-        --tlscert=/certs/docker.pem \
-        --tlskey=/certs/docker-key.pem \
+        --tlscert=/certs/node.pem \
+        --tlskey=/certs/node-key.pem \
         --discovery-opt kv.cacertfile=/certs/ca.pem \
-        --discovery-opt kv.certfile=/certs/default.pem \
-        --discovery-opt kv.keyfile=/certs/default-key.pem \
+        --discovery-opt kv.certfile=/certs/node.pem \
+        --discovery-opt kv.keyfile=/certs/node-key.pem \
         "consul://consul.service.$DATACENTER.$STACK_NAME:8500/swarm"
 }
 
@@ -98,8 +96,8 @@ register(){
 EOF
     curl --fail \
          --cacert /etc/swarmer/certs/ca.pem \
-         --cert /etc/swarmer/certs/default.pem \
-         --key /etc/swarmer/certs/default-key.pem \
+         --cert /etc/swarmer/certs/node.pem \
+         --key /etc/swarmer/certs/node-key.pem \
          -XPUT "https://consul.service.$DATACENTER.$STACK_NAME:8500/v1/agent/service/register" -d @"$TMPFILE" 2>/dev/null
     rm "$TMPFILE"
 }
@@ -107,15 +105,15 @@ EOF
 
 deregister(){
     #deregisters in consul
-    consul PUT "/agent/service/deregister/swarm-$(hostname)" 2>/dev/null
+    consul GET "/agent/service/deregister/swarm-$(hostname)" 2>/dev/null
 }
 
 check(){
     /usr/bin/curl --fail \
          --cacert /etc/swarmer/certs/ca.pem \
-         --cert /etc/swarmer/certs/docker.pem \
-         --key /etc/swarmer/certs/docker-key.pem \
-         -XGET "https://swarm.service.$DATACENTER.${STACK_NAME}:4000/_ping"
+         --cert /etc/swarmer/certs/node.pem \
+         --key /etc/swarmer/certs/node-key.pem \
+         -XGET "https://$(hostname).node.$DATACENTER.$STACK_NAME:4000/_ping"
 }
 
 stop() {

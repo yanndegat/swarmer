@@ -132,8 +132,8 @@ cat > $CONSUL_DATADIR/secure-conf.json <<EOF
       "https": 8500
     },
     "ca_file": "/etc/swarmer/certs/ca.pem",
-    "cert_file": "/etc/swarmer/certs/default.pem",
-    "key_file": "/etc/swarmer/certs/default-key.pem",
+    "cert_file": "/etc/swarmer/certs/node.pem",
+    "key_file": "/etc/swarmer/certs/node-key.pem",
     "verify_incoming": true,
     "verify_outgoing": true,
     "log_level": "INFO"

@@ -16,4 +16,4 @@ if [ ! -d "$HOME/.swarmer/$STACK/$DATACENTER" ]; then
 fi
 
 HOST="swarm.service.$DATACENTER.$STACK:4000"
-docker run --rm -it --net host -v "$HOME/.swarmer/$STACK/$DATACENTER":/certs:ro docker:1.10 -H "$HOST" --tlsverify --tlscacert /certs/ca.pem --tlscert /certs/default.pem --tlskey /certs/default-key.pem "$@"
+docker run --rm -it --net host -v "$HOME/.swarmer/$STACK/$DATACENTER":/certs:ro docker:1.10 -H "$HOST" --tlsverify --tlscacert /certs/ca.pem --tlscert /certs/client-192.168.101.1.pem --tlskey /certs/client-192.168.101.1-key.pem "$@"

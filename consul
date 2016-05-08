@@ -11,8 +11,9 @@ if [ -z "$STACK" ] || [ -z "$DATACENTER" ]; then
 fi
 
 CERTDIR="$HOME/.swarmer/vagrant/dev"
-curl -k --fail \
+curl -vvv -k --fail \
      --cacert "$CERTDIR/ca.pem" \
      --cert "$CERTDIR/default.pem" \
      --key "$CERTDIR/default-key.pem" \
-     -"X$METHOD" "https://192.168.101.101:8500/v1$path" "$@"
+     -H "Host: toto" \
+     -"X$METHOD" "https://consul.service.dev.vagrant:8500/v1$path" "$@"

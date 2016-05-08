@@ -1,0 +1,21 @@
+#!/bin/bash
+TARGET=$1
+
+case "$OSTYPE" in
+    darwin*)
+        printf "%s" "$(ifconfig "$(route -n get "$TARGET" | grep interface | sed 's/.*interface: \(.*\)$/\1/g')" | grep 'inet ' | sed 's/.*inet *\([^ ]*\).*$/\1/g')"
+        ;;
+    linux*)
+        which ip > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            printf "%s" "$(ip route | grep "$1" | sed 's/.*src \([0-9\.]*\) .*/\1/g')"
+        else
+            TARGET=$(echo "$TARGET"| sed 's/\([^\/]*\)\/.*/\1/g')
+            printf "%s" "$(ifconfig "$(route | grep "$TARGET" | awk '{print $8}')" | grep 'inet ' | sed 's/.*inet *\([^ ]*\).*$/\1/g')"
+        fi
+        ;;
+    *)
+        echo "unknown: $OSTYPE"
+        exit 1
+        ;;
+esac
