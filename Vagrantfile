@@ -11,15 +11,11 @@ $stack = $spec['stack']
 $dc = $spec['dc']
 $box = $spec['box'] || "yanndegat/swarmer"
 $admin_network = $spec['admin_network']
-$servers = $spec['servers']
-$consul_joinip = $servers.first['ip']
-
-def indent_file_content_for_cloud_init (file_name)
-  IO.read(file_name).split("\n").collect{|line| "     #{line}"}.join("\n")
-end
+$nodes = $spec['nodes']
+$consul_joinip = $nodes.first['ip']
 
 def init_tls_ca_certs ()
-  host_ip = `./bin/ipfromroute #{$admin_network}`
+  host_ip = `./bin/ipforroute #{$admin_network}`
   init_certs_files = ["ca", "client-#{host_ip}"].flat_map{ |c| ["#{$certs_path}/#{$stack}/#{$dc}/#{c}.pem","#{$certs_path}/#{$stack}/#{$dc}/#{c}-key.pem"]}
   if not init_certs_files.map{ |f| File.file?(f) }.reduce{|r,c| r && c }
     puts "generating ca cert and cert for client #{host_ip}"
@@ -32,15 +28,19 @@ def init_tls_ca_certs ()
 end
 
 def init_tls_nodes_certs()
-  nodes_certs_files = $servers.flat_map{ |s| ["#{$certs_path}/#{$stack}/#{$dc}/#{s['name']}.pem","#{$certs_path}/#{$stack}/#{$dc}/#{s['name']}-key.pem"]}
+  nodes_certs_files = $nodes.flat_map{ |s| ["#{$certs_path}/#{$stack}/#{$dc}/#{s['name']}.pem","#{$certs_path}/#{$stack}/#{$dc}/#{s['name']}-key.pem"]}
   if not nodes_certs_files.map{ |f| File.file?(f) }.reduce{|r,c| r && c }
-    puts "generating certs for nodes: #{$servers.map{ |s| s['name'] }.join(' ')}"
-    init_nodes = system("./bin/node-certs #{$stack} #{$dc} #{$servers.map{ |s| s['name'] }.join(' ')}")
+    puts "generating certs for nodes: #{$nodes.map{ |s| s['name'] }.join(' ')}"
+    init_nodes = system("./bin/node-certs #{$stack} #{$dc} #{$nodes.map{ |s| s['name'] }.join(' ')}")
     if not init_nodes
       puts "failed to init nodes certificates"
       exit 1
     end
   end
+end
+
+def indent_file_content_for_cloud_init (file_name)
+  IO.read(file_name).split("\n").collect{|line| "     #{line}"}.join("\n")
 end
 
 def cert_content_for_userdata(cert)
@@ -54,6 +54,7 @@ end
 def userdata(node)
     userdata = <<EOF
 #cloud-config
+hostname: #{node}
 ssh_authorized_keys:
   - ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
 write_files:
@@ -62,7 +63,7 @@ write_files:
     owner: "root"
     content: |
       export JOINIPADDR=#{$consul_joinip}
-      export CLUSTER_SIZE=#{$servers.size}
+      export CLUSTER_SIZE=#{$nodes.size}
       export CONSUL_OPTS="-ui -node=#{node}"
       export ADMIN_NETWORK="#{$admin_network}"
       export PUBLIC_NETWORK="#{$admin_network}"
@@ -109,7 +110,7 @@ Vagrant.configure("2") do |config|
     v.functional_vboxsf     = false
   end
 
-  $servers.each do |server|
+  $nodes.each do |server|
 
     config.vm.define server['name'] do |srv|
       srv.vm.provider :virtualbox do |v|
