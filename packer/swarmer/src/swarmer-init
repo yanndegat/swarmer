@@ -1,0 +1,28 @@
+#!/bin/bash
+log(){
+   logger -s -t "swarmer" -p "$@"
+}
+
+if [ ! -f /etc/swarmer/swarmer.conf ]; then
+    log user.error "couldn't find configuration file"
+    exit 1
+fi
+
+source /etc/swarmer/swarmer.conf
+STACK_NAME=${STACK_NAME:-swarmer}
+DATACENTER=${DATACENTER:-dc1}
+
+if [ -f /etc/swarmer/certs/certs.tar ]; then
+    cd /etc/swarmer/certs && tar -xf certs.tar
+fi
+
+log user.info "init swarmer"
+cp /etc/swarmer/certs/ca.pem /etc/ssl/certs/"$DATACENTER.$STACK_NAME".pem
+update-ca-certificates
+
+pushd "/home/core/acis"
+for i in ./*.aci; do
+    if [ -f "$i" ]; then
+        rkt fetch --insecure-options=image "$i"
+    fi
+done

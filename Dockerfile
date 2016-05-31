@@ -2,6 +2,7 @@ FROM docker:1.10
 
 ENV TERRAFORM_VERSION 0.6.14
 ENV PACKER_VERSION 0.10.0
+ENV CFSSL_JSON R1.2
 
 #update
 RUN set -ex \
@@ -14,6 +15,10 @@ RUN set -ex \
     && unzip packer_${PACKER_VERSION}_linux_amd64.zip -d /usr/local/bin \
     && mkdir $HOME/.gnupg \
     && echo "pinentry-program /usr/bin/pinentry-tty" > $HOME/.gnupg/gpg-agent.conf \
+    && wget https://pkg.cfssl.org/${CFSSL_VERSION}/cfssl_linux-amd64 \
+    && mv cfssl_linux-amd64 /usr/local/bin/cfssl \
+    && wget https://pkg.cfssl.org/${CFSSL_VERSION}/cfssljson_linux-amd64 \
+    && mv cfssljson_linux-amd64 /usr/local/bin/cfssljson \
     && rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip packer_${PACKER_VERSION}_linux_amd64.zip \
     /usr/local/bin/terraform-provider-atlas \
     /usr/local/bin/terraform-provider-azure \

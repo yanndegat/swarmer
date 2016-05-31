@@ -8,10 +8,20 @@ case "$OSTYPE" in
     linux*)
         which ip > /dev/null 2>&1
         if [ $? -eq 0 ]; then
-            printf "%s" "$(ip route | grep "$1" | sed 's/.*src \([0-9\.]*\) .*/\1/g')"
+            ip route | grep -q "$TARGET"
+            if [ $? -eq 0 ]; then
+                printf "%s" "$(ip route | grep "$TARGET" | sed 's/.*src \([0-9\.]*\) .*/\1/g')"
+            else
+                printf "%s" "$(ip route | grep "default" | sed 's/.*src \([0-9\.]*\) .*/\1/g')"
+            fi
         else
             TARGET=$(echo "$TARGET"| sed 's/\([^\/]*\)\/.*/\1/g')
-            printf "%s" "$(ifconfig "$(route | grep "$TARGET" | awk '{print $8}')" | grep 'inet ' | sed 's/.*inet *\([^ ]*\).*$/\1/g')"
+            route | grep -q "$TARGET"
+            if [ $? -eq 0 ]; then
+                printf "%s" "$(ifconfig "$(route | grep "$TARGET" | awk '{print $8}')" | grep 'inet ' | sed 's/.*inet *\([^ ]*\).*$/\1/g')"
+            else
+                printf "%s" "$(ifconfig "$(route | grep "default" | awk '{print $8}')" | grep 'inet ' | sed 's/.*inet *\([^ ]*\).*$/\1/g')"
+            fi
         fi
         ;;
     *)

@@ -1,0 +1,97 @@
+#!/bin/bash
+source "$(dirname "$0")/functions.sh"
+DATACENTER=${DATACENTER:-dc1}
+LIB_DIR=/var/lib/flocker
+CONF_DIR="$LIB_DIR"/etc
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hv] start|stop|rm
+Handles the lifecycle of the flocker agent service
+
+COMMANDS:
+    start              start flocker controller
+    stop               stop flocker controller
+    rm                 rm rkt container
+OPTIONS:
+    -h                 display this help and exit
+    -v                 verbose mode. Can be used multiple
+                       times for increased verbosity.
+EOF
+}
+
+start() {
+    sudo rkt run \
+         --net=host \
+         --hostname="$(hostname)" \
+         --volume resolv,kind=host,source=/etc/resolv.conf,readOnly=false \
+         --mount volume=resolv,target=/etc/resolv.conf \
+         --volume conf,kind=host,source="$CONF_DIR" \
+         --volume docker,kind=host,source="/run/docker" \
+         --mount volume=conf,target=/etc/flocker \
+         --mount volume=docker,target=/run/docker \
+         --volume bootid,kind=host,source=/proc/sys/kernel/random/boot_id \
+         --mount volume=bootid,target=/proc/sys/kernel/random/boot_id \
+         --set-env=FLOCKER_CONTROL_SERVICE_BASE_URL="https://flocker.service.$STACK_NAME:4523/v1" \
+         --set-env=MY_NETWORK_IDENTITY=$(hostname) \
+         --uuid-file-save "$UUID_FILE" \
+         clusterhq/flocker-core --exec /bin/sh -- -c '/usr/lib/klibc/bin/umount /proc/sys/kernel/random/boot_id && /opt/flocker/bin/flocker-docker-plugin'
+}
+
+if [ ! -f /etc/swarmer/swarmer.conf ]; then
+    log user.error "couldn't find configuration file"
+    exit 1
+fi
+
+if [ "$VOLUME_DRIVER" != "flocker" ]; then
+    log user.info "flocker is disabled"
+    exit 0
+fi
+if [ "$SWARM_MODE" != "agent" ] && [ "$SWARM_MODE" != "both" ]; then
+    log user.info "not a flocker agent node: nothing to do."
+    exit 0
+fi
+if [ ! -f /etc/swarmer/flocker-agent.yml ]; then
+    log user.error "flocker-agent.yml is missing"
+    exit 1
+fi
+
+mkdir -p $LIB_DIR/root_fs $CONF_DIR /run/docker/plugins
+cp /etc/swarmer/flocker-agent.yml $CONF_DIR/agent.yml
+cp /etc/swarmer/certs/ca.pem "$CONF_DIR"/cluster.crt
+cp /etc/swarmer/certs/client.pem "$CONF_DIR"/plugin.crt
+cp /etc/swarmer/certs/client-key.pem "$CONF_DIR"/plugin.key
+
+OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
+while getopts ":hv:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        v)  verbose=$((verbose+1))
+            ;;
+        '?')
+            show_help >&2
+            exit 1
+            ;;
+    esac
+done
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+case $1 in
+    start)
+        start
+        ;;
+    stop)
+        stop_rkt
+        ;;
+    rm)
+        rm_rkt
+        ;;
+    *)
+        log user.error "unknown command: $1"
+        exit 1
+        ;;
+esac

@@ -1,0 +1,9 @@
+[Unit]
+Description=AWS Setup: Formats the /var/lib/rkt drive
+Before=var-lib-rkt.mount dbus.service swarmer.service
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash -c "(blkid -t TYPE=ext4 | grep xvdd) || (/usr/sbin/mkfs.ext4 -F /dev/xvdd)"
+[Install]
+WantedBy=default.target

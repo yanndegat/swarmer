@@ -1,0 +1,12 @@
+[Unit]
+Description=Flocker Control Service
+PartOf=swarmer.service
+After=swarmer.service consul.service
+Before=swarm.service
+[Service]
+Restart=on-failure
+ExecStartPre=-/opt/swarmer/flocker-control-manage rm
+ExecStartPre=/opt/swarmer/flocker-control-manage register
+ExecStart=/opt/swarmer/flocker-control-manage start
+ExecStop=/opt/swarmer/flocker-control-manage stop
+ExecStopPost=/opt/swarmer/flocker-control-manage deregister

@@ -2,18 +2,14 @@
 
 ## This file contains all the functions
 ## handling the lifecycle of a DC
-BASEDIR=$(readlink -f $(dirname $0))/..
+BASEDIR=$(readlink -f "$(dirname "$0")")/..
 BUCKET_NAME="swarmer-${AWS_ACCOUNT}-${STACK_NAME}"
 PACKER_SWARMER_DIR=$BASEDIR/../../packer/swarmer
 PACKER_BASTION_VPN_DIR=$BASEDIR/../../packer/bastion-vpn
 OUTPUT_DIR=/tmp/output
-
-
 SWARMER_AMI_NAME="swarmer"
 BASTION_VPN_AMI_NAME="bastion-vpn"
-
 INIT_AMIS=0
-
 TF_COMPONENT=
 TF_COMMAND=
 TF_ID=
@@ -25,21 +21,20 @@ if [ ! -d $OUTPUT_DIR ]; then
     mkdir $OUTPUT_DIR
 fi
 
-
 debug(){
     if [[ $verbose == 2 ]]; then
-        echo "$@" >&2
+        logger -s -t "swarm-agent" -p user.debug "$@"
     fi
 }
 
 log(){
     if [[ $verbose == 1 ]]; then
-        echo "$@" >&2
+        logger -s -t "swarm-agent" -p user.info "$@"
     fi
 }
 
 fatal(){
-    echo $1 >&2
+    logger -s -t "swarm-agent" -p user.error "$@"
     exit 1
 }
 
@@ -62,6 +57,7 @@ COMMANDS:
 OPTIONS:
     -a AWS_ACCOUNT              AWS account number
     -A                          Destroys/Builds Amis ( default false )
+    -d DATACENTER               datacenter
     -k AWS_ACCESS_KEY_ID        AWS Access key id
     -h                          display this help and exit
     -n STACK_NAME               stack name
@@ -85,6 +81,7 @@ COMMANDS:
 
 OPTIONS:
     -a AWS_ACCOUNT           (required)     AWS account number
+    -d DATACENTER               datacenter
     -k AWS_ACCESS_KEY_ID     (required)     AWS Access key id
     -h                                      display this help and exit
     -n STACK_NAME            (required)     stack name
@@ -119,6 +116,9 @@ _checks(){
     if [[ -z $STACK_NAME ]]; then
         fatal "the env var STACK_NAME must be set."
     fi
+    if [[ -z $DATACENTER ]]; then
+        fatal "the env var DATACENTER must be set."
+    fi
     if [[ -z $KEYPAIR_PASSPHRASE ]]; then
         fatal "the env var KEYPAIR_PASSPHRASE must be set."
     fi
@@ -139,6 +139,7 @@ _exists-s3bucket(){
 init(){
     create-s3bucket
     generate-keypair
+    generate-tls-cacert
 
     if [[ $INIT_AMIS == 1 ]]; then
         all-amis
@@ -147,7 +148,7 @@ init(){
 
 deinit(){
     echo "WARNING: you will loose terraform state and your ssh keypair, continue ?"
-    read OK
+    read -r OK
 
     if [[ $OK =~ y|Y|yes|Yes|YES ]]; then
         if [[ $INIT_AMIS == 1 ]]; then
@@ -155,7 +156,7 @@ deinit(){
         fi
         _exists-s3bucket
         if [[ $? == 0 ]]; then
-            aws s3 rb --force s3://${BUCKET_NAME}
+            aws s3 rb --force "s3://${BUCKET_NAME}"
         fi
     fi
 }
@@ -163,18 +164,40 @@ deinit(){
 generate-keypair(){
     _check-s3bucket
     log "generates keypair, encrypts en pushes it to s3://${BUCKET}"
-    ssh-keygen -t rsa -P '' -f $OUTPUT_DIR/${STACK_NAME}.keypair >&2
-    gpg --textmode --batch --passphrase "$KEYPAIR_PASSPHRASE" -c $OUTPUT_DIR/${STACK_NAME}.keypair >&2
-    aws s3 cp $OUTPUT_DIR/${STACK_NAME}.keypair.gpg s3://${BUCKET_NAME}/ >&2
-    aws s3 cp $OUTPUT_DIR/${STACK_NAME}.keypair.pub s3://${BUCKET_NAME}/ >&2
+    ssh-keygen -t rsa -P '' -f "$OUTPUT_DIR/${STACK_NAME}.keypair" >&2
+    gpg --textmode --batch --passphrase "$KEYPAIR_PASSPHRASE" -c "$OUTPUT_DIR/${STACK_NAME}.keypair" >&2
+    aws s3 cp "$OUTPUT_DIR/${STACK_NAME}.keypair.gpg" "s3://${BUCKET_NAME}/" >&2
+    aws s3 cp "$OUTPUT_DIR/${STACK_NAME}.keypair.pub" "s3://${BUCKET_NAME}/" >&2
 }
+
+generate-tls-cacert(){
+    _check-s3bucket
+    log "generates tls cacert, encrypts en pushes it to s3://${BUCKET}"
+    export CERTDIR=$OUTPUT_DIR/certs
+    "$BASEDIR/../../bin/init-certs" "$STACK_NAME" "$DATACENTER"
+    pushd $CERTDIR
+    #find . -type f -name "ca*.pem" -print0 | tar -cf certs.tar --null -T -
+    tar -cf cacert.tar ca.pem ca-key.pem
+    base64 < cacert.tar > $OUTPUT_DIR/cacert.tar.base64
+    popd
+    gpg --textmode --batch --passphrase "$KEYPAIR_PASSPHRASE" -c "$OUTPUT_DIR/cacert.$DATACENTER.$STACK_NAME.tar.base64" >&2
+    aws s3 cp "$OUTPUT_DIR/cacerts.$DATACENTER.$STACK_NAME.tar.base64.gpg" "s3://${BUCKET_NAME}/" >&2
+}
+
+dl-cacert(){
+   _checks
+   _check-s3bucket
+    log "get cacert from s3://${BUCKET_NAME}/cacerts.$DATACENTER.$STACK_NAME.tar.base64.gpg to ${PWD}"
+    aws s3 cp "s3://${BUCKET_NAME}/cacerts.$DATACENTER.$STACK_NAME.tar.base64.gpg" ./ >&2
+}
+
 
 dl-keypair(){
    _checks
    _check-s3bucket
     log "get keypair from s3://${BUCKET_NAME}/${STACK_NAME}.keypair to ${PWD}"
-    aws s3 cp s3://${BUCKET_NAME}/${STACK_NAME}.keypair.gpg ./ >&2
-    aws s3 cp s3://${BUCKET_NAME}/${STACK_NAME}.keypair.pub ./ >&2
+    aws s3 cp "s3://${BUCKET_NAME}/${STACK_NAME}.keypair.gpg" ./ >&2
+    aws s3 cp "s3://${BUCKET_NAME}/${STACK_NAME}.keypair.pub" ./ >&2
 }
 
 create-s3bucket(){

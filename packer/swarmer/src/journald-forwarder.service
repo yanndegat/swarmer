@@ -1,0 +1,10 @@
+[Unit]
+Description=Forwards journal entries to configured endpoint
+After=network.target swarmer.service
+PartOf=swarmer.service
+
+[Service]
+EnvironmentFile=/etc/swarmer/swarmer.conf
+ExecStart=/opt/swarmer/journald-forwarder
+Restart=always
+RestartSec=5s

@@ -1,0 +1,11 @@
+[Unit]
+Description=HAProxy service with consul backend
+PartOf=swarmer.service
+Requires=consul.service
+After=consul.service
+[Service]
+Restart=on-failure
+RestartSec=10s
+ExecStartPre=-/opt/swarmer/haproxy-manage rm
+ExecStart=/opt/swarmer/haproxy-manage start
+ExecStop=/opt/swarmer/haproxy-manage stop

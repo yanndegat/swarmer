@@ -1,0 +1,77 @@
+#!/bin/bash -e
+source "$(dirname "$0")/functions.sh"
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hv] start|stop|rm
+Handles the lifecycle of a haproxy-consul service
+
+COMMANDS:
+    start              Starts haproxy
+    stop               Stops haproxt
+    rm                 rm rkt container
+
+OPTIONS:
+    -h                 display this help and exit
+    -v                 verbose mode. Can be used multiple
+                       times for increased verbosity.
+EOF
+}
+
+start(){
+    log user.info "start"
+    rkt run \
+        --net=host \
+        --hostname="$(hostname)" \
+        --set-env=USESSL=1 \
+        --set-env=CACERT=ca.pem \
+        --set-env=CERT=node.pem \
+        --set-env=KEY=node-key.pem \
+        --set-env=CONSUL_USESSL=1 \
+        --set-env=CONSUL_CACERT=ca.pem \
+        --set-env=CONSUL_CERT=node.pem \
+        --set-env=CONSUL_KEY=node-key.pem \
+        --set-env=DOMAIN=service.datamc \
+        --set-env=CONSUL_HOST=consul.service.datamc \
+        --volume cacerts,kind=host,source=/etc/ssl/certs,readOnly=true \
+        --mount volume=cacerts,target=/etc/ssl/certs \
+        --volume certs,kind=host,source="/etc/swarmer/certs",readOnly=true \
+        --mount volume=certs,target=/certs \
+        --uuid-file-save "$UUID_FILE" \
+        yanndegat/haproxy-consul
+}
+
+OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
+while getopts ":hv:n:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        v)  verbose=$((verbose+1))
+            ;;
+        '?')
+            show_help >&2
+            exit 2
+            ;;
+    esac
+done
+
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+case $1 in
+    start)
+        start
+        ;;
+    rm)
+        rm_rkt
+        ;;
+    stop)
+        stop_rkt
+        ;;
+    *)
+        log user.error "unknown command: $1"
+        exit 1
+        ;;
+esac

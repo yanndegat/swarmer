@@ -11,7 +11,7 @@ variable "vpc_id" {
 
 variable "name" {
     description = "The Name of the swarm cluster."
-    default = "DC1"
+    default = "swarm"
 }
 
 variable "additional_docker_opts" {

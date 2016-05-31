@@ -1,0 +1,14 @@
+[Unit]
+Description=Swarmer
+After=network-online.target
+Requires=network-online.target
+Before=consul.service docker.service swarm-manager.service swarm-agent.service registry.service registrator.service docker-configurator.service journald-forwarder.service flocker-control.service flocker-container-agent.service flocker-dataset-agent.service flocker-docker-plugin.service haproxy.service
+Wants=consul.service docker.service swarm-manager.service swarm-agent.service registry.service registrator.service docker-configurator.service telegraf.service journald-forwarder.service flocker-control.service flocker-container-agent.service flocker-dataset-agent.service flocker-docker-plugin.service haproxy.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/swarmer/swarmer-init
+ExecStop=/bin/echo "Stopping swarmer services"
+
+[Install]
+WantedBy=swarmer.target

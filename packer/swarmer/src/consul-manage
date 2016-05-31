@@ -1,0 +1,172 @@
+#!/bin/bash
+source "$(dirname "$0")/functions.sh"
+
+JOINIPADDR=${JOINIPADDR}
+JOINIPADDR_WAN=${JOINIPADDR_WAN}
+DATACENTER=${DATACENTER:-dc1}
+CLUSTER_SIZE=${CLUSTER_SIZE:-3}
+CONSUL_MODE=${CONSUL_MODE:-"server"}
+CONSUL_SERVER_OPTS="-server -bootstrap-expect $CLUSTER_SIZE"
+CONSUL_DATADIR="/var/lib/consul"
+BASE_CONSUL_OPTS="-data-dir $CONSUL_DATADIR -dc ${DATACENTER} -domain ${STACK_NAME}"
+CONSUL_BIN=$(readlink -f "$(dirname "$0")")/consul
+verbose=0
+
+if [ ! -z "$CONSUL_ENCRYPT_KEY" ]; then
+    CONSUL_OPTS="$CONSUL_OPTS -encrypt $CONSUL_ENCRYPT_KEY"
+fi
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-ahv] [-j JOINIPADDR] [-c CLUSTER_SIZE] start|stop
+Handles the lifecycle of a consul agent
+
+COMMANDS:
+    start              Starts a consul agent
+    stop               Stops a consul agent
+OPTIONS:
+    -a                 agent mode only
+    -c CLUSTER_SIZE    sets the cluster size expected.
+                       Defaults to $CLUSTER_SIZE
+    -h                 display this help and exit
+    -j JOINIPADDR      sets the join ADDR
+                       defaults to /etc/swarmer/joinaddr.conf
+    -v                 verbose mode. Can be used multiple
+                       times for increased verbosity.
+EOF
+}
+
+getjoinipaddr(){
+    JOIN=$(peers)
+
+    if [[ ! -z $JOIN ]]; then
+        echo "$JOINIPADDR,$JOIN"
+    elif [[ -z $JOIN ]] && [[ ! -z $JOINIPADDR ]]; then
+        echo "$JOINIPADDR"
+    else
+        return 1
+    fi
+}
+
+start() {
+    case $CONSUL_MODE in
+        agent)
+            CONSUL_OPTS="$CONSUL_OPTS"
+        ;;
+        server)
+            CONSUL_OPTS="$CONSUL_SERVER_OPTS $CONSUL_OPTS"
+        ;;
+        *)
+            logger -t "$SERVICE_NAME" "Unsupported mode $CONSUL_MODE. Choose either agent|server. Exiting."
+            exit 7
+        ;;
+    esac
+
+    JOIN=$(getjoinipaddr)
+    if [[ $? == 0 ]]; then
+        CONSUL_OPTS="$CONSUL_OPTS -retry-join=${JOIN//,/ -retry-join=} -rejoin"
+    fi
+
+    if [[ ! -z "$JOINIPADDR_WAN" ]] && [[ "$CONSUL_MODE" == server ]]; then
+        CONSUL_OPTS="$CONSUL_OPTS -retry-join-wan=$JOINIPADDR_WAN"
+    fi
+
+    CONSUL_OPTS="$CONSUL_OPTS -advertise=$HOSTIP -client=0.0.0.0"
+
+    logger -t "$SERVICE_NAME" "Starting agent with opts: $CONSUL_OPTS"
+    $CONSUL_BIN agent $BASE_CONSUL_OPTS $CONSUL_OPTS -config-file $CONSUL_DATADIR/secure-conf.json
+}
+
+stop() {
+    $CONSUL_BIN leave
+}
+
+peers() {
+    if [ -d $CONSUL_DATADIR/raft ] && [ -f $CONSUL_DATADIR/raft/peers.json ]; then
+        jq '.[]' < "$CONSUL_DATADIR/raft/peers.json" | paste -d , -s | sed 's/"//g'| sed 's/:8300//g'
+    fi
+}
+
+if [[ ! -x "$CONSUL_BIN" ]]; then
+    echo "can't find executable consul bin."
+    exit 1
+fi
+
+if [[ -z $JOINIPADDR ]]; then
+    echo "a join ip addr must be set. if it's a 'one node cluster', then specify the ip of the node"
+    exit 1
+fi
+
+if [[ ! -d $CONSUL_DATADIR ]]; then
+    mkdir -p $CONSUL_DATADIR
+fi
+
+HOSTIP=$(gethostadminipaddr)
+
+cat > $CONSUL_DATADIR/secure-conf.json <<EOF
+{
+    "node_name": "$(hostname)",
+    "datacenter": "$DATACENTER",
+    "domain" : "$STACK_NAME",
+    "data_dir": "$CONSUL_DATADIR",
+    "log_level": "INFO",
+    "node_name": "",
+    "ports": {
+      "http": -1,
+      "https": 8500,
+      "dns": 53
+    },
+    "ca_file": "/etc/swarmer/certs/ca.pem",
+    "cert_file": "/etc/swarmer/certs/node.pem",
+    "key_file": "/etc/swarmer/certs/node-key.pem",
+    "verify_incoming": true,
+    "verify_outgoing": true,
+    "log_level": "INFO",
+    "service":{
+        "ID":"consul-$(hostname)",
+        "Address":"$HOSTIP",
+        "Port":8500,
+        "Name":"consul-agent",
+        "Tags":["ssl", "http"]
+    }
+}
+EOF
+
+OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
+while getopts ":ahv:c:j:" opt; do
+    case "$opt" in
+        a)  CONSUL_MODE="agent"
+            ;;
+        h)
+            show_help
+            exit 0
+            ;;
+        v)  verbose=$((verbose+1))
+            ;;
+        c)  CLUSTER_SIZE=$OPTARG
+            ;;
+        j)  JOINIPADDR=$OPTARG
+            ;;
+        '?')
+            show_help >&2
+            exit 1
+            ;;
+    esac
+done
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+case $1 in
+    start)
+        logger -t "$SERVICE_NAME" "start"
+        start
+        ;;
+    stop)
+        logger -t "$SERVICE_NAME" "stop"
+        stop
+        ;;
+    *)
+        echo "unhandled command: $1" >&2
+        exit 2
+        ;;
+esac

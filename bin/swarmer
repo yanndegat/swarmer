@@ -1,0 +1,63 @@
+#!/bin/bash
+BASEDIR=$(readlink -f "$(dirname "$0")")
+print_opts=0
+
+# Usage info
+show_help() {
+    cat << EOF
+Usage: ${0##*/} [-ho] STACK_NAME
+runs docker command targeting a swarm cluster
+
+OPTIONS:
+    -h                 display this help and exit
+    -o                 only outputs docker engine opts
+EOF
+}
+
+
+OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
+while getopts ":ho" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        o)  print_opts=1
+            ;;
+        '?')
+            show_help >&2
+            exit 1
+            ;;
+    esac
+done
+
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+STACK="${1%:*}"
+shift
+
+if [ -z "$STACK" ]; then
+    echo "usage: $BASEDIR/swarmer.sh STACK"
+fi
+
+if [ ! -d "$HOME/.swarmer/$STACK" ]; then
+    echo "$STACK is not present in $HOME/.swarmer. Generate the certificates with:" >&2
+    echo "$BASEDIR/certs.sh $STACK" >&2
+    exit 1
+fi
+
+HOST="tcp://swarm.service.$STACK:4000"
+
+if [[ "$print_opts" == 1 ]]; then
+    printf -- "-H %s --tlsverify --tlscacert %s --tlscert %s --tlskey %s" "$HOST" "$HOME/.swarmer/$STACK/ca.pem" "$HOME/.swarmer/$STACK/cert.pem" "$HOME/.swarmer/$STACK/key.pem"
+else
+    docker run --rm -it --net host \
+           -v "$HOME/.swarmer/$STACK/ca.pem":/certs/ca.pem:ro \
+           -v "$HOME/.swarmer/$STACK/cert.pem":/certs/cert.pem:ro \
+           -v "$HOME/.swarmer/$STACK/key.pem":/certs/key.pem:ro \
+           docker:1.10 -H "$HOST" --tlsverify \
+           --tlscacert /certs/ca.pem \
+           --tlscert /certs/cert.pem \
+           --tlskey /certs/key.pem \
+           "$@"
+fi

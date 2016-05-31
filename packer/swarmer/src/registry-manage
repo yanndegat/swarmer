@@ -1,0 +1,114 @@
+#!/bin/bash -e
+source "$(dirname "$0")/functions.sh"
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hv] start|stop|check|register|deregister|rm
+Handles the lifecycle of a docker registry
+
+COMMANDS:
+    start              Starts a docker registry
+    stop               Stops a docker registry
+    rm                 rm rkt container
+    register           Registers registry in consul
+    deregister         Deregisters registry in consul
+    check              Checks if registry is running
+
+OPTIONS:
+    -h                 display this help and exit
+    -v                 verbose mode. Can be used multiple
+                       times for increased verbosity.
+EOF
+}
+
+start(){
+    log user.info "start"
+    rkt run \
+        --net=host \
+        --hostname="$(hostname)" \
+        --volume cacerts,kind=host,source=/etc/ssl/certs,readOnly=true \
+        --mount volume=cacerts,target=/etc/ssl/certs \
+        --volume conf,kind=host,source=/etc/docker/registry/config.yml,readOnly=true \
+        --mount volume=conf,target=/etc/docker/registry/config.yml \
+        --volume certs,kind=host,source=/etc/swarmer/certs,readOnly=true \
+        --mount volume=certs,target=/certs \
+        --set-env=REGISTRY_HTTP_TLS_CERTIFICATE=/certs/node.pem \
+        --set-env=REGISTRY_HTTP_TLS_KEY=/certs/node-key.pem \
+        --uuid-file-save "$UUID_FILE" \
+        registry --exec /bin/registry -- \
+        serve /etc/docker/registry/config.yml
+}
+
+register(){
+    #registers in consul
+    TMPFILE=$(mktemp)
+    IP=$(gethostadminipaddr)
+    cat > "$TMPFILE" <<EOF
+{
+  "ID":"registry-$(hostname)",
+  "Name": "registry",
+  "Address": "$IP",
+  "Port": 5000,
+  "Tags": [
+      "ssl","http"
+    ],
+  "Check": {
+    "Script": "/opt/swarmer/registry-manage",
+    "Interval": "10s"
+  }
+}
+EOF
+    consul PUT "/agent/service/register" -d @"$TMPFILE" 2>/dev/null
+    rm "$TMPFILE"
+}
+
+deregister(){
+    consul GET "/agent/service/deregister/registry-$(hostname)" 2>/dev/null
+}
+
+check(){
+  run_curl GET "https://$(hostname).node.$DATACENTER.$STACK_NAME:5000/"
+}
+
+OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
+while getopts ":hv:n:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        v)  verbose=$((verbose+1))
+            ;;
+        '?')
+            show_help >&2
+            exit 2
+            ;;
+    esac
+done
+
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+case $1 in
+    start)
+        start
+        ;;
+    stop)
+        stop_rkt
+        ;;
+    rm)
+        rm_rkt
+        ;;
+    check)
+        check
+        ;;
+    register)
+        register
+        ;;
+    deregister)
+        deregister
+        ;;
+    *)
+        check
+        ;;
+esac

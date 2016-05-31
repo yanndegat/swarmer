@@ -1,22 +1,28 @@
-#+TITLE: Swarmer: a Swarm Cluster Maker
+#+TITLE: Swarmer: a CoreOS VM to build swarm clusters
 #+OPTIONS: toc:1
 #+SETUPFILE: theme.setup
- 
-Note: you may prefer reading the [[file:README.html][README.html]] file in your browser. 
+
+Note: you may prefer reading the [[file:README.html][README.html]] file in your browser.
 
 * Description
 
-Swarmer is an open source project to help people deploying proper configured docker swarm clusters on AWS.
+Swarmer is a pre-built CoreOS VM that ease the bootstrap of swarm clusters. It contains services pre configured for production such as consul, an internal docker registry and a registrator, with HA and TLS communication enabled.
 
-You'll find other and simpler tutorials or github projects to deploy swarm on AWS, but if you don't want your cluster to be exposed on public facing IPs, you'll then have to get your hands dirty on a lot of other things. 
+The project also comes with all the materials to boot a cluster on your local machine with a Vagrant setup, or on AWS EC2 with terraform scripts.
 
-This project tries to compile a lot of resources to get a swarm cluster up and running on a private aws cloud.
+It helps filling the gap between "Docker in Dev" versus "Docker in Production"
+
+ #+CAPTION: Docker in Dev VS Prod
+ #+NAME:   fig:docker-prod.jpg
+#+ATTR_HTML: width="100px"
+[[./docker-prod.jpg]]
+
+
+You'll find other and maybe simpler tutorials or github projects to deploy swarm on AWS, but if you don't want your cluster to be exposed on public facing IPs, you'll then have to get your hands dirty on a lot of other things.
 
 Swarmer is built on top of the following components:
-- [[https://www.terraform.io/][Terraform]] for provisioning the infrastructure
 - [[http://packer.io/][Packer]] for building the boxes for various providers (Virtualbox, AWS, Kvm, ...)
-- [[http://consul.io][Consul]] for service discovery, DNS
-- [[http://docker.io][Docker]] for application container runtimes, of course
+- [[https://www.terraform.io/][Terraform]] for provisioning the infrastructure on AWS
 - [[http://vagrantup.com][Vagrant]] for running the swarm cluster in virtualbox
 
 
@@ -34,31 +40,53 @@ To use this project you will need at least this list of tools properly installed
 
 To quickly bootstrap a swarm cluster with vagrant on your local machine, configure the [[file:servers.yml][servers.yml]] file and type the following commands. 
 
-#+NAME: use the image
-#+BEGIN_SRC bash
-$ git clone https://github.com/yanndegat/swarmer
-$ cd swarmer
-$ vi servers.yml
-...
-$ vagrant up
-==> box: Loading metadata for box 'yanndegat/swarmer'
-    box: URL: https://atlas.hashicorp.com/yanndegat/swarmer
-==> box: Adding box 'yanndegat/swarmer' (v0.0.1) for provider: virtualbox
-    box: Downloading: https://atlas.hashicorp.com/yanndegat/boxes/swarmer/versions/0.0.1/providers/virtualbox.box
-    box: Progress: 26% (Rate: 1981k/s, Estimated time remaining: 0:02:24)
-...
-$ ./setup.sh
-try command:
-export DOCKER_HOST=swarm-4000.service.swarmer:4000
-docker info
+ #+BEGIN_SRC bash
+ $ git clone https://github.com/yanndegat/swarmer
+ $ cd swarmer
+ $ vi servers.yml
+ ...
+ #+END_SRC
 
- or go to http://consul.service.swarmer:8500/ui
-$
-#+END_SRC
+ #+CAPTION: servers.yml
+ #+NAME:   fig:servers.yml
+ #+BEGIN_SRC yaml
+ admin_network: 192.168.101.0/24
+ stack: vagrant
+ dc: dev
 
-Go to http://consul.service.swarmer:8500/ui
+ servers:
+   - name    : "swarm-01"
+     memory  : "3072"
+     cpus    : "2"
+     ip      : 192.168.101.101
+   - name    : "swarm-02"
+     memory  : "3072"
+     cpus    : "2"
+     ip      : 192.168.101.102
+   - name    : "swarm-03"
+     memory  : "3072"
+     cpus    : "2"
+     ip      : 192.168.101.103
+ #+END_SRC
 
-If you encounter any problem, refer to the next sections.
+ #+BEGIN_SRC bash
+ $ vagrant up
+ ==> box: Loading metadata for box 'yanndegat/swarmer'
+     box: URL: https://atlas.hashicorp.com/yanndegat/swarmer
+ ==> box: Adding box 'yanndegat/swarmer' (v0.0.1) for provider: virtualbox
+     box: Downloading: https://atlas.hashicorp.com/yanndegat/boxes/swarmer/versions/0.0.1/providers/virtualbox.box
+     box: Progress: 26% (Rate: 1981k/s, Estimated time remaining: 0:02:24)
+ ...
+ $
+ #+END_SRC
+
+Refer to the [[play][Play with swarm]] section to go futher.
+
+ TLS certificates have been generated in your ~$HOME/.swarmer/vagrant/dev~ directory. You have to declare the CA Cert on your host, according to your system. 
+
+ Go to https://consul.service.dev.vagrant:8500/ui
+
+ If you encounter any problem, refer to the next sections.
 
 
 * Getting Started on AWS
@@ -66,27 +94,30 @@ If you encounter any problem, refer to the next sections.
 Refer to the [[file:terraform/aws/README.html][README]] file.
 
 
-* Play with your swarm cluster
+* <<play>>Play with your swarm cluster
 
 Now we can play with swarm.
 
 ** Configure DNS resolution
 
-To resolv names, you have to configure a dns service that will forward the requests to consul. A docker-compose file is provided ([[file:dns-proxy-compose.yml]]).
+Before using swarm, you have to declare the Swarmer VMs internal DNS in your system. To do so, you have multiple options:
 
-This compose file starts a dnsmasq service with net=host that will target $CONSULIP consul agent. This only works with vagrant or when the VPN is setup.
+- add one of the hosts in your /etc/resolv.conf (quick but dirty)
+- configure your network manager to add the hosts permanently
+- configure a local dnsmasq service which forwards dns lookups to the Swarmer Dns service according to domain names.
+
+For the latter solution, you can refer to the file:./bin/dns file which runs a dnsmasq forwarder service.
 
 #+BEGIN_SRC bash
 $ # check your /etc/resolv.conf file
 $ cat /etc/resolv.conf
 nameserver 127.0.0.1
 ...
-$ # eventually run the following command for your next boot
+$ # eventually run the following command for your next boot (according to your OS)
 $ sudo su
 root $ echo "nameserver 127.0.0.1" > /etc/resolv.conf.head
 root $ exit
-$ export CONSULIP=192.168.101.101
-$ docker-compose -d -f dns-proxy-compose.yml up -d
+$ ./bin/dns dev.vagrant 192.168.101.101
 $ curl registry.service.swarmer:5000/v2/_catalog
 {"repositories":[]}
 $ ...
@@ -99,16 +130,33 @@ You can now use your swarm cluster to run docker containers as simply as you wou
 target the IP of one of your swarm node. 
 
 #+BEGIN_SRC bash
-export DOCKER_HOST=swarm-4000.service.swarmer:4000
-docker pull alpine
-docker run --rm -it alpine /bin/sh
+$ ./bin/swarm vagrant:dev run --rm -it alpine /bin/sh
 / # ...
 #+END_SRC
 
 
-** Using the private registry
+** Using the Swarmer internal registry
 
-The private insecure registry which is automatically started on the swarm cluster is registered on the "registry.service.swarmer:5000" name. So you have to tag & push docker images with this name if you want the nodes to be able to download your images.
+The Swarmer internal registry which is automatically started on the swarm cluster is registered on the "registry.service.dev.vagrant:5000" name. So you have to tag & push docker images with this name if you want the nodes to be able to download your images.
+
+As the registry has an auto signed TLS certificate, you have to declare its CA Cert on your docker engine and on your system (again according to your OS)
+
+#+BEGIN_SRC bash
+$ sudo cp ~/.swarmer/vagrant/dev/ca.pem /etc/docker/certs.d/registry.service.dev.vagrant:5000/
+$ sudo cp ~/.swarmer/vagrant/dev/ca.pem  /etc/ca-certificates/trust-source/anchors
+$ sudo systemctl restart docker
+...
+$ sudo update-ca-trust
+...
+$ docker tag alpine registry.service.dev.vagrant:5000/alpine
+...
+$ docker push registry.service.dev.vagrant:5000/alpine
+...
+$ ./bin/swarm vagrant:dev pull registry.service.dev.vagrant:5000/alpine
+...
+$ ./bin/swarm vagrant:dev run --rm -it registry.service.dev.vagrant:5000/alpine /bin/sh
+/ # ...
+#+END_SRC
 
 
 ** Run the examples
@@ -120,9 +168,12 @@ Examples are available in the [[file:examples][examples]] directory. You can pla
 
 *** Architecture guidelines
 
+The Swarmer VM tries to follow the Immutable Infrastructure precepts:
+
 - Every component of the system must be able to boot/reboot without having to be provisionned with configuration elements other than via cloud init.
 - Every component of the system must be able to discover its pairs and join them
 - If a component can't boot properly, it must be considered as dead. Don't try to fix it.
+- To update the system, we must rebuild new components and replace existing ones with the new ones.
 
 
 *** Swarmer is architectured with the following components :
@@ -137,7 +188,7 @@ Examples are available in the [[file:examples][examples]] directory. You can pla
 - a swarm cluster setup, which consists of a set of swarm agents running in "server" mode, and additionnal nodes running in agent mode.
   Every swarm node will also run a consul agent and a registrator service to declare every running container in consul.
 
-- an insecure private registry which is started automatically by a random swarm node. It's registered under the dns address registry.service.consul. If this node is down, it will be restarted by another one within a few seconds. On AWS, it is possible to configure the registry's backend to target a S3 bucket.
+- an TLS private registry which is started automatically by a random swarm node. It's registered under the dns address registry.service.dev.vagrant. If this node is down, it will be restarted by another one within a few seconds. On AWS, it is possible to configure the registry's backend to target a S3 bucket.
 
 Some nodes could play both "consul server" and "swarm server" roles to avoid booting too many servers for small cluster setups.
 
@@ -150,15 +201,20 @@ Yes. Because by now, it's the only coreos version that supports docker 1.10.
 
 
 ** Use docker-machine
-We may later consider using docker-machine to install & configure the swarm agents. We would then benefit proper & secured configurations.
+
+We didn't use docker-machine as it's not suitable with the packer pre build system.
 
 
-** Run consul and swarm services as docker containers
-There are some caveats running the system services as docker containers, even on coreos. The main problem is the process supervision with systemd, as full described in this [[https://lwn.net/Articles/676831/][article]]. That said, the coreos rocket container engine could be considered as a suitable alternative.
+** Run consul and swarm services as rocker containers
+
+There are some caveats running the system services as docker containers, even on coreos. The main problem is the process supervision with systemd, as full described in this [[https://lwn.net/Articles/676831/][article]]. Plus, we don't want system services to be visible and "killable" by a simple docker remote command.
+
+ That's why every system component is run with the rocket coreos container engine. 
 
 
 ** Monitoring
 There is no monitoring yet, and no centralized log system configured either.v
+
 
 ** Server.yml to bootstrap AWS
 It would be nice if the server.yml could be used as input to terraform an AWS setup.
@@ -166,7 +222,7 @@ It would be nice if the server.yml could be used as input to terraform an AWS se
 
 ** Running on GCE
 
-
+   
 ** Running on Azure
 
 

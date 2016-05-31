@@ -3,13 +3,14 @@
 # This script inits the required resources to bootstrap a DC
 #  - s3 buckets
 #  - ssh key
+#  - TLS certs
 #  - amis
-BASEDIR=$(readlink -f $(dirname $0))
-source $BASEDIR/functions.sh
+BASEDIR=$(readlink -f "$(dirname "$0")")
+source "$BASEDIR/functions.sh"
 
 
 OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
-while getopts ":hvAa:k:s:n:" opt; do
+while getopts ":hvAa:k:s:n:d:" opt; do
     case "$opt" in
         a)  AWS_ACCOUNT=$OPTARG
             ;;
@@ -20,6 +21,8 @@ while getopts ":hvAa:k:s:n:" opt; do
         s)  AWS_SECRET_ACCESS_KEY=$OPTARG
             ;;
         n)  STACK_NAME=$OPTARG
+            ;;
+        d)  DATACENTER=$OPTARG
             ;;
         h)
             show_help_init

@@ -1,0 +1,12 @@
+[Unit]
+Description=The plugin-driven server agent for reporting metrics into InfluxDB
+Documentation=https://github.com/influxdata/telegraf
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/swarmer/swarmer.conf
+User=core
+ExecStart=/bin/bash -c 'if [ ! -z "$INFLUXDB_URL" ]; then /opt/swarmer/telegraf -config /opt/swarmer/telegraf.conf; fi'
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+KillMode=process

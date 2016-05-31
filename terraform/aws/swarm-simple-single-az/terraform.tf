@@ -1,7 +1,7 @@
 module "swarm-cluster-single-zone" {
      source = "../swarm"
      count = "${var.count}"
-     name = "${var.name}"
+     name = "${var.name}-master"
      key_name = "${var.key_name}"
      stack_name = "${var.stack_name}"
      subnet_id = "${var.subnet_id}"
@@ -27,7 +27,7 @@ module "swarm-cluster-single-zone" {
 module "swarm-cluster-single-zone-nodes" {
      source = "../swarm"
      count = "${var.additional_nodes}"
-     name = "${var.name}"
+     name = "${var.name}-node"
      key_name = "${var.key_name}"
      stack_name = "${var.stack_name}"
      subnet_id = "${var.subnet_id}"

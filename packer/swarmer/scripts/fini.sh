@@ -1,27 +1,26 @@
 #!/bin/bash -ex
 
 CONSUL_VERSION=0.6.4
+WORKDIR=/home/core/src
 
 #DOWNLOADS
-wget -O /tmp/docker2aci.tar.gz https://github.com/appc/docker2aci/releases/download/v0.9.3/docker2aci-v0.9.3.tar.gz
-wget -O /tmp/consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
-wget -O /tmp/config.yml https://raw.githubusercontent.com/docker/distribution/master/cmd/registry/config-example.yml
-
+wget -O "$WORKDIR"/docker2aci.tar.gz https://github.com/appc/docker2aci/releases/download/v0.9.3/docker2aci-v0.9.3.tar.gz
+wget -O "$WORKDIR"/consul.zip https://releases.hashicorp.com/consul/${CONSUL_VERSION}/consul_${CONSUL_VERSION}_linux_amd64.zip
+wget -O "$WORKDIR"/config.yml https://raw.githubusercontent.com/docker/distribution/master/cmd/registry/config-example.yml
+wget -O "$WORKDIR"/telegraf.tar.gz https://dl.influxdata.com/telegraf/releases/telegraf-0.13.1_linux_amd64.tar.gz
 #PREPARE IMAGES
-pushd "/tmp"
+
+pushd "$WORKDIR"
 tar -xzf ./docker2aci.tar.gz
+mkdir -p $HOME/acis
 for i in ./*.docker; do
     if [ -f "$i" ]; then
-        ./docker2aci-v0.9.3/docker2aci "$i"
-        rkt fetch --insecure-options=image "${i%*.docker}.aci"
-        rm "$i"
+        mkdir ./tmp
+        TMPDIR=./tmp ./docker2aci-v0.9.3/docker2aci "$i"
+        mv "${i%*.docker}.aci" $HOME/acis
+        rm -Rf "$i" ./tmp
     fi
 done
-
-#rkt fetch --insecure-options=image docker://flocker-control-service:latest
-#rkt fetch --insecure-options=image docker://flocker-container-agent:latest
-#rkt fetch --insecure-options=image docker://flocker-dataset-agent:latest
-#rkt fetch --insecure-options=image docker://flocker-docker-plugin:latest
 popd
 
 #CREATE DIRS
@@ -32,24 +31,34 @@ sudo mkdir -p /etc/docker/registry
 
 #INSTALL FILES
 pushd /opt/swarmer
-sudo unzip /tmp/consul.zip
-sudo rm /tmp/consul.zip
+sudo unzip "$WORKDIR"/consul.zip
+sudo rm "$WORKDIR"/consul.zip
 popd
 
-sudo mv /tmp/{consul,registry,registrator,swarm-manager,swarm-agent,flocker-control,flocker-agent}-manage /opt/swarmer/
-sudo mv /tmp/dnsmasq-manifest.sh /opt/swarmer/
-sudo mv /tmp/docker-configurator /opt/swarmer/
-sudo mv /tmp/swarmer-init /opt/swarmer/
-sudo chmod +x /opt/swarmer/{consul,registry,registrator,swarm-agent,swarm-manager}-manage
+TMPDIR=$(mktemp -d)
+pushd $TMPDIR
+tar -xzf "$WORKDIR"/telegraf.tar.gz
+sudo mv ./telegraf-0.13.1-1/usr/bin/telegraf /opt/swarmer
+sudo chmod +x /opt/swarmer/telegraf
+popd
+
+sudo mv "$WORKDIR"/{consul,registry,telegraf,haproxy,registrator,swarm-manager,swarm-agent,flocker-control,flocker-container-agent,flocker-dataset-agent,flocker-docker-plugin}-manage /opt/swarmer/
+sudo mv "$WORKDIR"/functions.sh /opt/swarmer/
+sudo mv "$WORKDIR"/docker-configurator /opt/swarmer/
+sudo mv "$WORKDIR"/swarmer-init /opt/swarmer/
+sudo mv "$WORKDIR"/journald-forwarder /opt/swarmer/
+sudo mv "$WORKDIR"/telegraf.conf /opt/swarmer/telegraf.conf
+
+sudo chmod +x /opt/swarmer/*-manage
 sudo chmod +x /opt/swarmer/docker-configurator
 sudo chmod +x /opt/swarmer/swarmer-init
-sudo chmod +x /opt/swarmer/dnsmasq-manifest.sh
+sudo chmod +x /opt/swarmer/journald-forwarder
 
-sudo mv /tmp/{swarmer,consul,dnsmasq,registrator,docker-configurator,swarm-manager,swarm-agent,registry}.service /etc/systemd/system/
-sudo mv /tmp/swarmer.path /etc/systemd/system/
+sudo mv "$WORKDIR"/{swarmer,telegraf,haproxy,journald-forwarder,consul,registrator,docker-configurator,swarm-manager,swarm-agent,registry,flocker-control,flocker-dataset-agent,flocker-container-agent,flocker-docker-plugin}.service /etc/systemd/system/
+sudo mv "$WORKDIR"/swarmer.path /etc/systemd/system/
 
-sudo mv /tmp/config.yml /etc/docker/registry
-sudo mv /tmp/60-swarm.conf /etc/swarmer/docker.conf.d/
+sudo mv "$WORKDIR"/config.yml /etc/docker/registry
+sudo mv "$WORKDIR"/60-swarm.conf /etc/swarmer/docker.conf.d/
 
 # SETUP SYSTEMD
 sudo systemctl enable swarmer.path

@@ -1,13 +1,18 @@
 #!/bin/bash
-CONSULIP=${CONSULIP:-192.168.101.101}
-DOMAIN=${DOMAIN:-dev.vagrant}
+SWARMER_DOMAIN=$1
+SWARMER_HOST=$2
+BASEDIR=$(readlink -f "$(dirname "$0")")
+
+if [ -z "$SWARMER_DOMAIN" ] || [ -z "$SWARMER_HOST" ]; then
+    echo "usage: $BASEDIR/dns DOMAIN HOST"
+fi
 
 unset DOCKER_HOST
-docker kill dnsmasq >/dev/null 2>&1
-docker rm dnsmasq >/dev/null 2>&1
+docker kill swarmer_dnsmasq >/dev/null 2>&1
+docker rm swarmer_dnsmasq >/dev/null 2>&1
 
-docker run -d --name dnsmasq \
+docker run -d --name swarmer_dnsmasq \
        --net host \
        --cap-add NET_ADMIN \
        -e SERVICE_IGNORE=true \
-       andyshinn/dnsmasq -S "/$DOMAIN/${CONSULIP}#8600" > /dev/null 2>&1
+       andyshinn/dnsmasq -S "/${SWARMER_DOMAIN}/${SWARMER_HOST}" > /dev/null 2>&1

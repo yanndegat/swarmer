@@ -1,0 +1,222 @@
+---
+## provider - this attributes selects the vagrant provider. Currently, only the
+## 'virtualbox' and 'aws' providers are supported. Default 'virtualbox'
+provider            : "virtualbox"
+
+## admin-network - this network is used by the VMs to determine on
+## which IP they should bind services. Defaults to "default"
+admin-network       : 192.168.101.0/24
+
+## box - the vagrant box id that will be used to boot the VMs.
+## Defaults to the public vagrant box yanndegat/swarmer-coreos
+## if you want to build your own image, then you should uncomment
+## the following line. If you set the provider attribute to 'aws'
+## then you should set the box attribute to your AMI'id.
+box: swarmer-coreos
+
+## id - the id of the cluster. As it will be used as part of nodes hostnames,
+## only "[a-za-Z_-]" characters are allowed. Id value will also be set
+## as the docker daemon label "clusterid"
+# required
+id                  : myid
+
+## stack - the id of the stack. It will be used to generate TLS certificates
+## as the domain name
+## only "[a-za-Z_-]" characters are allowed
+# required
+stack               : vagrant
+
+## dc - the id of the consul DC. it will be also used as part of the domain name
+## to generate certificates. Defaults to dc1
+## only "[a-za-Z_-]" characters are allowed
+# required
+dc                  : dc1
+
+## consul-joinip - The ip of a consul server to join.
+# node. It can be useful to make clusters merge.
+# required
+consul-joinip       : 192.168.101.101
+
+## consul-joinip-wan - The ip of a consul server to join on wan. Defaults to first
+## node. It can be useful to make clusters from 2 datacenters to merge.
+## Warning : this option is only applicable to consul-server nodes.
+# consul-joinip-wan:
+
+## influxdb-url - url of influxdb where telegraf will output the collected metrics
+# influxdb-url : udp://INFLUXDB_HOST:INFLUXDB_UDP_PORT
+
+## volume-driver - the docker volume driver used by the engine.
+## Defaults to none. Other possible value is flocker.
+## You'll have to configure the flocker section.
+# volume-driver :
+
+## journarld-sink - a TLS journald json sink to upload the logs to.
+## If none is specified, each node's journald will store logs locally.
+# journald-sink : "hostname:port"
+
+## ca - the file path of the ca.pem for TLS
+## Defaults to $HOME/.swarmer/stack/ca.pem
+# ca:
+
+## client-cert - the file path of the client.pem for TLS
+## Pay attention that Flocker requires CN to be formatted as "user-...."
+## The certificate must have "clientAuth" extendedKeyUsage extension enabled 
+## Defaults to $HOME/.swarmer/stack/cert.pem
+# client-cert:
+
+## client-cert-key - the file path of the client-key.pem for TLS
+## Defaults to $HOME/.swarmer/stack/key.pem
+# client-cert-key:
+
+
+## ssh-key - The local file path of the public ssh key 
+## specified in keypair-name. By default, will lookup in ~/.swarmer/[stack]/ssh-keypair.pub
+# ssh-key : 
+
+## private-ssh-key - The local file path of the private ssh key corresponding to the public key
+## specified in ssh-key or the keypair-name for the ws provider. By default, will lookup
+## in ~/.swarmer/[stack]/ssh-keypair
+# private-ssh-key : 
+
+## labels : labels applied to the docker daemon of every node. Labels can later be used as swarm
+## scheduler filters
+# labels :
+  #    - storage=ssd
+  #    - type=data
+  #    - foo=bar
+
+## nodes: list of swarm nodes to boot
+nodes:
+    ## COMMON ATTRIBUTES
+    ## ip - This is private ip of the virtual machine. It must match the admin-network CIDR
+    ## As you have to configure a consul-joinip, you often have to fix at least one ip
+    ## in a cluster. For the virtualbox provider, you must fix an ip for each node
+    # based o IPs
+  - ip      : 192.168.101.101
+
+    ## swarm-master - Starts the node as a swarm master in addition to the swarm agent.
+    ## Defaults to true.
+    # swarm-master    : true
+
+    ## consul-server - Starts the node as a consul-server in addition to the consul agent
+    ## Defaults to true
+    # consul-server   : true
+
+    ## labels : labels applied to the docker daemon. Labels can later be used as swarm
+    ## scheduler filters
+    # labels :
+    #    - storage=ssd
+    #    - type=data
+    #    - foo=bar
+
+    ## control-cert - the file path of the control.pem for TLS
+    ## Pay attention that Flocker requires CN to be "control-service"
+    ## The certificate must have "clientAuth,serverAuth" extendedKeyUsage extensions enabled 
+    ## Defaults to $HOME/.swarmer/$stack/$dc/$id-$nodeindex-control.pem
+    # control-cert:
+
+    ## control-cert-key - the file path of the control-key.pem for TLS
+    ## Defaults to $HOME/.swarmer/$stack/$dc/$id-$nodeindex-control-key.pem
+    # control-cert-key:
+
+    ## node-cert - the file path of the node.pem for TLS
+    ## Pay attention that Flocker requires CN to be formatted as "node-[uuid]"
+    ## The certificate doesn't need any extensions enabled 
+    ## Defaults to $HOME/.swarmer/$stack/$dc/$id-$nodeindex-node.pem
+    # node-cert:
+
+    ## node-cert-key - the file path of the node-key.pem for TLS
+    ## Defaults to $HOME/.swarmer/$stack/$dc/$id-$nodeindex-node-key.pem
+    # node-cert-key:
+
+    ## flocker-control - Starts the node as a flocker-control node in addition to
+    ## the flocker agents if the volume driver is set to flocker. Defaults to false
+    # flocker-control   : false
+
+
+    ## SPECIFIC VIRTUALBOX ATTRIBUTES
+
+    ## memory - only valid for the 'virtualbox' provider. This is the amount
+    ## of ram that will be allocated to the virtualmachine
+    memory  : "3072"
+    ## cpus - only valid for the 'virtualbox' provider. This is the amount
+    ## of cpus that will be allocated to the virtualmachine
+    cpus    : "2"
+
+    ## SPECIFIC AWS ATTRIBUTES
+
+    ## aws-elastic-ip - Can be set to 'true', or to an existing Elastic IP address. If true, allocate a new Elastic IP address to the instance. If set to an existing Elastic IP address, assign the address to the instance.
+    # aws-elastic-ip : false
+
+    ## associate-public-ip - If true, will associate a public IP address to an instance in a VPC.
+    # associate-public-ip : false
+
+  - memory  : "3072"
+    cpus    : "2"
+    ip      : 192.168.101.102
+  - memory  : "3072"
+    cpus    : "2"
+    ip      : 192.168.101.103
+
+## AWS PROVIDER ATTRIBUTES
+# aws:
+
+  ## access-key-id - The access key for accessing AWS
+  ## required
+  #access-key-id : ""
+
+  ## availability-zone - The availability zone within the region to launch the instance. If nil, it will use the default set by Amazon.
+  #availability-zone : ""
+
+  ## instance-type - The type of instance, such as "m3.medium". The default value of this if not specified is "m3.medium". "m1.small" has been deprecated in "us-east-1" and "m3.medium" is the smallest instance type to support both paravirtualization and hvm AMIs
+  # instance-type : "m3.medium"
+
+  ## keypair-name - The name of the keypair to use to bootstrap AMIs which support it.
+  ## required
+  # keypair-name : ""
+
+  ## monitoring - Set to "true" to enable detailed monitoring.
+  # monitoring : false
+
+  ## session-token - The session token provided by STS
+  # session-token : ""
+
+  ## region - The region to start the instance in, such as "us-east-1"
+  ## required
+  # region : "eu-west-1"
+
+  ## secret-access-key - The secret access key for accessing AWS
+  ## required
+  # secret-access-key : ""
+
+  ## security-groups - An array of security groups for the instance. If this instance will be launched in VPC, this must be a list of security group Name. For a nondefault VPC, you must use security group IDs instead (http://docs.aws.amazon.com/cli/latest/reference/ec2/run-instances.html).
+  ## required
+  # security-groups : ""
+
+  ## iam-instance-profile-arn - The Amazon resource name (ARN) of the IAM Instance Profile to associate with the instance
+  # iam-instance-profile-arn : ""
+
+  ## iam-instance-profile-name - The name of the IAM Instance Profile to associate with the instance
+  # iam-instance-profile-name : ""
+
+  ## subnet-id - The subnet to boot the instance into, for VPC.
+  ## required
+  # subnet-id : ""
+
+  ## tenancy - When running in a VPC configure the tenancy of the instance. Supports 'default' and 'dedicated'.
+  # tenancy : "default"
+
+  ## use-iam-profile - If true, will use IAM profiles for credentials.
+  # use-iam-profile : false
+
+  ## elb - The ELB name to attach to the instance.
+  # elb : ""
+
+  ## ebs-optimized - EBS optimized instance
+  # ebs-optimized : true
+
+  ## unregister-elb-from-az - Removes the ELB from the AZ on removal of the last instance if true (default). In non default VPC this has to be false.
+  # unregister-elb-from-az : false
+
+  ## terminate-on-shutdown - Indicates whether an instance stops or terminates when you initiate shutdown from the instance.
+  # terminate-on-shutdown : true

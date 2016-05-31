@@ -417,6 +417,24 @@ resource "aws_security_group_rule" "bastion_to_consul_dns_udp" {
     source_security_group_id = "${aws_security_group.nodes.id}"
 }
 
+resource "aws_security_group_rule" "bastion_to_dns_tcp" {
+    type = "egress"
+    from_port = 53
+    to_port = 53
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.bastion.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+
+resource "aws_security_group_rule" "bastion_to_dns_udp" {
+    type = "egress"
+    from_port = 53
+    to_port = 53
+    protocol = "udp"
+    security_group_id = "${aws_security_group.bastion.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+
 resource "aws_security_group_rule" "bastion_to_swarm_manager" {
     type = "egress"
     from_port = 4000
@@ -544,6 +562,23 @@ resource "aws_security_group_rule" "nodes_from_bastion_consul_dns_udp" {
     security_group_id = "${aws_security_group.nodes.id}"
     source_security_group_id = "${aws_security_group.bastion.id}"
 }
+resource "aws_security_group_rule" "nodes_from_bastion_dns_tcp" {
+    type = "ingress"
+    from_port = 53
+    to_port = 53
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.bastion.id}"
+}
+resource "aws_security_group_rule" "nodes_from_bastion_dns_udp" {
+    type = "ingress"
+    from_port = 53
+    to_port = 53
+    protocol = "udp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.bastion.id}"
+}
+
 resource "aws_security_group_rule" "nodes_from_bastion_consul_cluster_tcp" {
     type = "ingress"
     from_port = 8300
@@ -628,6 +663,22 @@ resource "aws_security_group_rule" "nodes_from_node_consul_dns_udp" {
     type = "ingress"
     from_port = 8600
     to_port = 8600
+    protocol = "udp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "nodes_from_node_dns_tcp" {
+    type = "ingress"
+    from_port = 53
+    to_port = 53
+    protocol = "tcp"
+    security_group_id = "${aws_security_group.nodes.id}"
+    source_security_group_id = "${aws_security_group.nodes.id}"
+}
+resource "aws_security_group_rule" "nodes_from_node_dns_udp" {
+    type = "ingress"
+    from_port = 53
+    to_port = 53
     protocol = "udp"
     security_group_id = "${aws_security_group.nodes.id}"
     source_security_group_id = "${aws_security_group.nodes.id}"

@@ -1,0 +1,14 @@
+#!/bin/bash
+BASEDIR=$(readlink -f "$(dirname "$0")")
+STACK="$1"
+KEYPAIRDIR=${KEYPAIRDIR:-"$HOME/.swarmer/$STACK"}
+
+if [ -z "$STACK" ]; then
+    echo "usage: $BASEDIR/swarmer.sh STACK"
+    echo "It will generate a client keypair in the $HOME/.swarmer/STACK directory."
+    exit 1
+fi
+
+mkdir -p "$KEYPAIRDIR"
+ssh-keygen -t rsa -f "$KEYPAIRDIR"/ssh-keypair
+echo "ssh keypair is in $(readlink -f "$KEYPAIRDIR")"

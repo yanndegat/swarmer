@@ -1,0 +1,11 @@
+[Unit]
+Description=This agent reports metrics into InfluxDB
+After=network.target swarmer.service
+PartOf=swarmer.service
+
+[Service]
+Type=forking
+ExecStart=/opt/swarmer/telegraf-manage start
+ExecStop=/opt/swarmer/telegraf-manage stop
+Restart=on-failure
+RestartSec=5s

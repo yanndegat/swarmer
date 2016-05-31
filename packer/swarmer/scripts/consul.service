@@ -1,9 +1,0 @@
-[Unit]
-Description=Consul Agent
-PartOf=swarmer.service
-After=swarmer.service
-Before=dnsmasq.service registrator.service swarm.service
-[Service]
-Restart=always
-ExecStart=/opt/swarmer/consul-manage start
-ExecStop=/opt/swarmer/consul-manage stop

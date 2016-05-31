@@ -1,0 +1,10 @@
+[Unit]
+Description=Flocker Docker Plugin
+PartOf=swarmer.service
+After=swarmer.service consul.service
+Before=swarm.service
+[Service]
+Restart=on-failure
+ExecStartPre=-/opt/swarmer/flocker-docker-plugin-manage rm
+ExecStart=/opt/swarmer/flocker-docker-plugin-manage start
+ExecStop=/opt/swarmer/flocker-docker-plugin-manage stop

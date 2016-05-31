@@ -14,21 +14,11 @@ resource "aws_instance" "swarm_node_first" {
 
     user_data = <<EOF
 #cloud-config
+hostname: ${var.name}-0
 coreos:
   update:
     reboot-strategy: off
 write_files:
-  - path: "/etc/rexray/config.yml"
-    permissions: "0644"
-    owner: "root"
-    content: |
-      rexray:
-        storageDrivers:
-          - ec2
-      aws:
-        accessKey: ${var.rexray_access_key_id}
-        secretKey: ${var.rexray_access_key_secret}
-        rexrayTag: ${var.stack_name}
   - path: "/etc/swarmer/swarmer.conf"
     permissions: "0644"
     owner: "root"
@@ -39,8 +29,8 @@ write_files:
       export CONSUL_MODE="${var.consul_mode}"
       export CLUSTER_SIZE=${var.count}
       export CONSUL_OPTS="$CONSUL_OPTS \
-      -node=${var.stack_name}-${var.name}-swarm_manager-0 \
-      -dc=${var.vpc_id}"
+      -node=${var.name}-0 \
+      -dc=${var.datacenter}"
   - path: "/etc/docker/registry/config.yml"
     permissions: "0644"
     owner: "root"
@@ -76,11 +66,27 @@ write_files:
     owner: "root"
     content: |
              DOCKER_OPTS="${var.additional_docker_opts}"
+  - path: "/etc/swarmer/certs/ca.pem"
+    permissions: "0600"
+    owner: "root"
+    content: |
+${file("${var.certs_dir}/ca.pem"))}
+  - path: "/etc/swarmer/certs/node.pem"
+    permissions: "0600"
+    owner: "root"
+    content: |
+${file("${var.certs_dir}/${var.name}-0.pem"))}
+  - path: "/etc/swarmer/certs/node-key.pem"
+    permissions: "0600"
+    owner: "root"
+    content: |
+${file("${var.certs_dir}/${var.name}-0-key.pem"))}
 EOF
 
     tags  {
-        Name = "${var.stack_name}-${var.name}-swarm_manager-0"
+        Name = "${var.name}-0"
         Stack = "${var.stack_name}"
+        Datacenter = "${var.datacenter}"
         Type = "swarm_manager"
         Id = "${count.index}"
     }
@@ -104,21 +110,11 @@ resource "aws_instance" "swarm_node_rest" {
 
     user_data = <<EOF
 #cloud-config
+hostname: ${var.name}-${count.index + 1}
 coreos:
   update:
     reboot-strategy: off
 write_files:
-  - path: "/etc/rexray/config.yml"
-    permissions: "0644"
-    owner: "root"
-    content: |
-      rexray:
-        storageDrivers:
-          - ec2
-      aws:
-        accessKey: ${var.rexray_access_key_id}
-        secretKey: ${var.rexray_access_key_secret}
-        rexrayTag: ${var.stack_name}
   - path: "/etc/swarmer/swarmer.conf"
     permissions: "0644"
     owner: "root"
@@ -129,8 +125,8 @@ write_files:
       export CONSUL_MODE="${var.consul_mode}"
       export CLUSTER_SIZE=${var.count}
       export CONSUL_OPTS="$CONSUL_OPTS \
-      -node=${var.stack_name}-${var.name}-swarm_manager-${count.index + 1} \
-      -dc=${var.vpc_id}"
+      -node=${var.name}-${count.index + 1} \
+      -dc=${var.datacenter}"
   - path: "/etc/docker/registry/config.yml"
     permissions: "0644"
     owner: "root"
@@ -166,11 +162,27 @@ write_files:
     owner: "root"
     content: |
              DOCKER_OPTS="${var.additional_docker_opts}"
+  - path: "/etc/swarmer/certs/ca.pem"
+    permissions: "0600"
+    owner: "root"
+    content: |
+${file("${var.certs_dir}/ca.pem"))}
+  - path: "/etc/swarmer/certs/node.pem"
+    permissions: "0600"
+    owner: "root"
+    content: |
+${file("${var.certs_dir}/${var.name}-${count.index + 1}.pem"))}
+  - path: "/etc/swarmer/certs/node-key.pem"
+    permissions: "0600"
+    owner: "root"
+    content: |
+${file("${var.certs_dir}/${var.name}-${count.index + 1}-key.pem"))}
 EOF
 
     tags  {
-        Name = "${var.stack_name}-${var.name}-swarm_manager-${count.index + 1}"
+        Name = "${var.name}-${count.index + 1}"
         Stack = "${var.stack_name}"
+        Datacenter = "${var.datacenter}"
         Type = "swarm_manager"
         Id = "${count.index}"
     }

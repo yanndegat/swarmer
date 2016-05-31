@@ -11,7 +11,7 @@ BASEDIR=$(readlink -f $(dirname $0))
 source $BASEDIR/functions.sh
 
 OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
-while getopts ":hva:k:r:s:n:c:i:f:" opt; do
+while getopts ":hva:d:k:r:s:n:c:i:f:" opt; do
     case "$opt" in
         a)  AWS_ACCOUNT=$OPTARG
             ;;
@@ -22,6 +22,8 @@ while getopts ":hva:k:r:s:n:c:i:f:" opt; do
         s)  AWS_SECRET_ACCESS_KEY=$OPTARG
             ;;
         n)  STACK_NAME=$OPTARG
+            ;;
+        d)  DATACENTER=$OPTARG
             ;;
         h)
             show_help_terraform

@@ -1,0 +1,10 @@
+[Unit]
+Description=Flocker Dataset Agent Service
+PartOf=swarmer.service
+After=swarmer.service consul.service
+Before=swarm.service
+[Service]
+Restart=on-failure
+ExecStartPre=-/opt/swarmer/flocker-dataset-agent-manage rm
+ExecStart=/opt/swarmer/flocker-dataset-agent-manage start
+ExecStop=/opt/swarmer/flocker-dataset-agent-manage stop

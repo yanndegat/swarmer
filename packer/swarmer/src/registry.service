@@ -1,0 +1,13 @@
+[Unit]
+Description=Private Docker Registry
+PartOf=swarmer.service
+After=swarmer.service consul.service
+Requires=consul.service
+[Service]
+Restart=always
+RestartSec=10s
+ExecStartPre=-/opt/swarmer/registry-manage rm
+ExecStartPre=/opt/swarmer/registry-manage register
+ExecStart=/opt/swarmer/registry-manage start
+ExecStop=/opt/swarmer/registry-manage stop
+ExecStopPost=/opt/swarmer/registry-manage deregister

@@ -1,0 +1,14 @@
+#!/bin/bash -e
+if [ ! -z "$JOURNALD_SINK" ]; then
+    # if $JOURNALD_SINK Hostname isn't resolved, socat hungs with 100% cpu load.
+    # Resolv hostname IP fixes the problem
+    HOSTS=$(getent hosts "${JOURNALD_SINK%:*}")
+    if [ $? -ne 0 ]; then
+        echo "unknown host ${JOURNALD_SINK%:*}" >&2
+        exit 1
+    fi
+    echo "start forwarding logs to $JOURNALD_SINK" >&2
+    socat EXEC:'journalctl -o json --follow' openssl:$JOURNALD_SINK,verify=1,cafile=/etc/swarmer/certs/ca.pem,cert=/etc/swarmer/certs/node.pem,key=/etc/swarmer/certs/node-key.pem
+else
+    echo "JOURNALD_SINK not set. nothing to do" >&2
+fi

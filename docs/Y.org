@@ -1,0 +1,389 @@
+#+TITLE: Docker in production
+#+SUBTITLE: Introducing project Blackfish
+#+DATE: 2016/06/09
+#+AUTHOR: Yann DEGAT
+#+COMPANY: Ippon Technologies
+#+EMAIL: ydegat@ippon.fr
+#+LANGUAGE: en
+#+WWW: http://blog.ippon.fr/
+#+GITLAB: http://gitlab.com/blackfish
+#+TWITTER: yanndegat
+#+REVEAL_ROOT: http://cdn.jsdelivr.net/reveal.js/3.0.0/
+#+REVEAL_THEME: black
+#+REVEAL_TRANS: slide
+#+OPTIONS: toc:1 num:nil
+
+* What is DOCKER ? (in one sentence)
+#+BEGIN_CENTER
+#+ATTR_HTML: :width 400px
+[[file:images/docker.jpg]]
+#+END_CENTER
+
+** Some say : "a lightweight VM" >>> NAh!
+#+BEGIN_NOTES
+some compare containers to "lightweight Virtual Machines"
+other to "chroot on steroids", solaris zones etc. 
+#+END_NOTES
+
+Definitely not a VM.
+
+** much more something like 
+#+BEGIN_NOTES
+It's mostly a new way to package "portable" apps
+Remember why Java was so popular in the 00's? 
+Because it was the first time people could deploy and run a software build on a platform on any other one.
+So that developers could dev on Windows and Ops deploy on AIX, and all the tech industry was happy.
+Docker now allows you to deploy any kind of software ( C/C++/Java/C#/JS/Scheme/Go/Python/.... ) on every platform.
+#+END_NOTES
+
+#+ATTR_REVEAL: :frag (appear)
+- a pkg manager with a run cmd ...
+  #+BEGIN_SRC bash
+  $ yum run nginx
+  #+END_SRC
+- ... and a bit of ssh
+  #+BEGIN_SRC bash
+  $ ssh user@mydevhost yum run nginx
+  #+END_SRC
+- available on every platform
+
+** BTW, have you had a look at nix/nixos ? 
+#+BEGIN_CENTER
+- https://www.mpscholten.de/docker/2016/01/27/you-are-most-likely-misusing-docker.html
+- http://lethalman.blogspot.com/2016/04/cheap-docker-images-with-nix_15.html
+#+END_CENTER
+
+#+BEGIN_NOTES
+Nix is an "functional" package manager
+Allowing you to install apps on a box with no side effects
+Some tried to demonstrate how to achieve some of docker's goals with nix.
+#+END_NOTES
+** and bocker ? 
+#+BEGIN_CENTER
+Docker implemented in around 100 lines of bash:
+
+https://github.com/p8952/bocker 
+#+END_CENTER
+
+#+BEGIN_NOTES
+a very good way to understand & demystify docker's mechanics
+#+END_NOTES
+** bocker run 
+#+BEGIN_SRC bash
+function bocker_run() { 
+  [...]
+	ip link add devveth0_"$uuid" type veth peer name veth1_"$uuid"
+  [...]
+	ip netns exec netns_"$uuid" ip addr add 10.0.0."$ip"/24 dev veth1_"$uuid"
+	[...]
+	btrfs subvolume snapshot "$btrfs_path/$1" "$btrfs_path/$uuid" > /dev/null
+	echo 'nameserver 8.8.8.8' > "$btrfs_path/$uuid"/etc/resolv.conf
+	echo "$cmd" > "$btrfs_path/$uuid/$uuid.cmd"
+	cgcreate -g "$cgroups:/$uuid"
+	: "${BOCKER_CPU_SHARE:=512}" && cgset -r cpu.shares="$BOCKER_CPU_SHARE" "$uuid"
+	: "${BOCKER_MEM_LIMIT:=512}" && cgset -r memory.limit_in_bytes="$((BOCKER_MEM_LIMIT * 1000000))" "$uuid"
+	cgexec -g "$cgroups:$uuid" \
+		ip netns exec netns_"$uuid" \
+		unshare -fmuip --mount-proc \
+		chroot "$btrfs_path/$uuid" \
+		/bin/sh -c "/bin/mount -t proc proc /proc && $cmd" \
+		2>&1 | tee "$btrfs_path/$uuid/$uuid.log" || true
+	ip link del dev veth0_"$uuid"
+	ip netns del netns_"$uuid"
+}
+#+END_SRC
+
+** Where is the magic ?
+#+BEGIN_CENTER
+#+ATTR_HTML: :width 400px
+[[file:images/magic.jpg]]
+#+END_CENTER
+
+#+BEGIN_NOTES
+So what's new with docker ? If you could do the quite same before with solaris zones, 100 lines of bash or a package manager ...
+#+END_NOTES
+
+** As we say today : "as simple as a Dockerfile"
+#+BEGIN_SRC bash
+FROM buildpack-deps:jessie-curl
+# gpg keys listed at https://github.com/nodejs/io.js
+RUN set -ex \
+  && for key in \
+    9554F04D7259F04124DE6B476D5A82AC7E37093B \
+    [...] \
+  ; do \
+    gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$key" \
+  ; done
+ENV NPM_CONFIG_LOGLEVEL info
+ENV IOJS_VERSION 3.3.0
+
+RUN curl -SLO "https://iojs.org/dist/v$IOJS_VERSION/iojs-v$IOJS_VERSION-linux-x64.tar.gz" \
+  && curl -SLO "https://iojs.org/dist/v$IOJS_VERSION/SHASUMS256.txt.asc" \
+  && gpg --verify SHASUMS256.txt.asc \
+  && grep " iojs-v$IOJS_VERSION-linux-x64.tar.gz\$" SHASUMS256.txt.asc | sha256sum -c - \
+  && tar -xzf "iojs-v$IOJS_VERSION-linux-x64.tar.gz" -C /usr/local --strip-components=1 \
+  && rm "iojs-v$IOJS_VERSION-linux-x64.tar.gz" SHASUMS256.txt.asc
+
+CMD [ "iojs" ]
+#+END_SRC
+
+** Clarified
+#+BEGIN_SRC bash
+FROM buildpack-deps:jessie-curl
+
+ENV NPM_CONFIG_LOGLEVEL info
+ENV IOJS_VERSION 3.3.0
+
+RUN curl -SLO "https://iojs.org/dist/v$IOJS_VERSION/iojs-v$IOJS_VERSION-linux-x64.tar.gz" \
+  && tar -xzf "iojs-v$IOJS_VERSION-linux-x64.tar.gz" -C /usr/local --strip-components=1 \
+  && rm "iojs-v$IOJS_VERSION-linux-x64.tar.gz" 
+
+CMD [ "iojs" ]
+#+END_SRC
+
+** docker-compose up
+#+BEGIN_SRC yaml
+version: "2"
+services:
+  elasticsearch:
+    image: elasticsearch
+
+  logstash:
+    image: logstash
+    command: |
+      -e 'input {[...]output { elasticsearch { hosts => ["elasticsearch:9200"] [...]}}'
+    ports:
+      - "12201:12201/udp"
+
+  kibana:
+    image: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+#+END_SRC
+
+** DEMO
+
+A little example : 
+- docker run alpine
+- docker run nginx
+- docker-compose up ELK
+
+* From Dev to Prod
+#+BEGIN_CENTER
+#+ATTR_HTML: :width 500px
+[[file:images/production.png]]
+#+END_CENTER
+** Things you better know about
+#+BEGIN_CENTER
+#+ATTR_HTML: :height 400px
+[[file:images/docker-prod.jpg]]
+#+END_CENTER
+#+BEGIN_NOTES
+There's a lot !
+#+END_NOTES
+** High Availability
+
+** Shipping
+
+** Compose not so compose-"able"
+You may have heard of DIND, the acronyme for Docker In Docker
+
+Have you ever heard of CINC ? which stands for
+
+#+BEGIN_CENTER
+*COMPOSE in COMPOSE*
+#+END_CENTER
+
+Relates to the concept of Sidekick containers
+
+** About performances
+*** All about IO
+Containerizing an app means : 
+#+ATTR_REVEAL: :frag (appear)
+- run it behind a linux bridge
+- on a "Union Mount" filesystem (unionfs,aufs,overlayfs,...)
+
+*** Networking
+#+ATTR_REVEAL: :frag (appear)
+- net host
+- coreos flannel
+- weave net (+++)
+- calico
+- docker networking
+
+*** Volumes
+#+ATTR_REVEAL: :frag (appear)
+- mount a volume from host
+- convoy
+- rexray
+- flocker
+
+** Resilience
+- autorestart
+- distribute
+
+** Security
+*** Encrypt
+#+ATTR_REVEAL: :frag (appear)
+- TLS everywhere
+
+*** Isolation
+#+ATTR_REVEAL: :frag (appear)
+- VM isolation
+
+*** Remote Access
+#+ATTR_REVEAL: :frag (appear)
+- secure access through TLS certs
+- ingress rules
+
+*** Volumes?
+#+BEGIN_SRC bash
+$ docker run -v /:/host alpine rm -Rf /host....
+#+END_SRC
+
+** Monitoring
+- docker ps/stats
+- cadvisor
+- docker ucp
+- weave scope
+- collectd, telegraf, riemann
+- influxdb, grafana, chronograf
+
+** Supervision
+- kapacitor, riemann
+
+** Logs
+- logging drivers : syslog, gelf, etc
+- elk, graylog
+
+** Dev <> Ops Collaboration
+
+** Infrastructure-Aware
+- Scheduling constraints
+* Platforms : Docker Swarm & consort
+
+** Mesos
+- The Elder
+- Container or Not Container, that is the question
+- Code "mesos" app
+- Hard to upgrade
+- Manager nodes
+
+#+BEGIN_NOTES
+
+#+END_NOTES
+
+** Kubernetes
+- Prod ready ?
+- "Ops"
+- hardened
+- Dev in docker, Ops in Pods
+#+BEGIN_NOTES
+
+#+END_NOTES
+
+** Swarm
+- The Docker inc Way
+- Tries to keep things as simple as a "docker run"
+
+** Deis 
+** Mantl
+- real great project
+** RancherOS
+- cook kido
+- sidekicks support
+- hard to automate
+- Cool features ( convoy, control center )
+
+** ...
+
+** and?
+
+* Introducing Blackfish
+#+BEGIN_CENTER
+#+ATTR_HTML: :width 400px
+[[file:images/blackfish_logo.png]]
+#+END_CENTER
+
+
+** Architecture 
+** Immutable Infrastructure
+
+#+BEGIN_CENTER
+#+ATTR_HTML: :width 700px
+[[file:images/swarm_ha.jpg]]
+#+END_CENTER
+
+Play LEGO
+
+** Dev & Aws ready
+- vagrant
+- terraform
+
+** Why Coreos ? 
+#+BEGIN_CENTER
+#+ATTR_HTML: :width 600px
+[[file:images/coreos.png]]
+#+END_CENTER
+- auto update
+- good building blocks ( systemd / rkt )
+- cloudinit + ignition
+
+** System services
+- run system services with rkt
+- prevents from remote docker kill/rm
+- better integration with systemd
+
+** Private Repository
+- You need to push your "packages/images" to your environment
+
+** Service Discovery
+- consul vs etcd vs zookeeper
+- dns
+- dns SRV requests
+- registrator
+
+** Port management
+*** http / https
+- haproxy-consul
+
+*** tcp/udp ( DBs )
+- Logical Ports Mapping
+- Manual Handling
+
+** Centralized logs
+- journald
+- graylog vs ELK
+- GELF Format
+- custom forwarder
+
+** Monitoring
+- telegraf versus collectd vs riemann
+- influxdb vs prometheus
+- grafana
+- kapacitor
+
+** Security
+- TLS everywhere
+- Certificate Management
+- PKI
+
+** DEMO
+- Show a pre configured cluster
+- Run a Graylog cluster
+- Add nodes
+- Kill old nodes : watch graylog 
+* The Rise of Unikernels
+#+BEGIN_CENTER
+#+ATTR_HTML: :width 500px
+[[file:images/unikernels.png]]
+#+END_CENTER
+
+- OSv + Capstan
+- MirageOS
+- Rumprun
+#+BEGIN_NOTES
+???
+#+END_NOTES

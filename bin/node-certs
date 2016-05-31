@@ -2,37 +2,92 @@
 BASEDIR=$(readlink -f "$(dirname "$0")")
 STACK="$1"
 DATACENTER="$2"
+CERTDIR=${CERTDIR:-"$HOME/.swarmer/$STACK/$DATACENTER"}
+CACERTDIR=${CACERTDIR:-"$HOME/.swarmer/$STACK"}
 shift 2
 HOSTS=($@)
 
-if [ -z "$STACK" ] || [ -z "$DATACENTER" ]; then
+if [ -z "$STACK" ] || [ -z "$DATACENTER" ] || [ -z "$1" ]; then
     echo "usage: $BASEDIR/swarmer.sh STACK DATACENTER [HOST1] [HOST2] ... [HOSTN]"
     echo "It will generate a keypair for each host in the $HOME/.swarmer/STACK/DATACENTER directory."
     exit 1
 fi
 
-CERTDIR="$HOME/.swarmer/$STACK/$DATACENTER"
-
-if [ ! -d "$CERTDIR" ]; then
-    echo "$CERTDIR doesn't exists. Please run init-certs."
+if [ ! -d "$CACERTDIR" ]; then
+    echo "$CACERTDIR doesn't exists. Please run init-certs."
     exit 1
 fi
 
-if [ ! -f "$CERTDIR/ca.pem" ] || [ ! -f "$CERTDIR/ca-key.pem" ]; then
+if [ ! -f "$CACERTDIR/ca.pem" ] || [ ! -f "$CACERTDIR/ca-key.pem" ]; then
     echo "CACERT keypair doesn't exists. Please run init-certs."
     exit 1
 fi
 
+mkdir -p "$CERTDIR"
+
+## CN,OU,Hostnames must be named after flocker's convention
+## Ask flockerz : https://github.com/ClusterHQ/flocker/blob/master/flocker/ca/_ca.py
+## Warning! Flocker impl doesn't support wildcard DNS.
+OU=$(openssl x509 -in "$CACERTDIR/ca.pem" -subject -noout | sed 's/.*OU=\([^\/]*\)\/.*/\1/g')
+
 for i in "${HOSTS[@]}"; do
+    HOST_NAME=${i%:*}
+    HOST_IP=${i#*:}
+    HOSTNAMES="\"$HOST_NAME.node.$DATACENTER.$STACK\""
+    HOSTNAMES="$HOSTNAMES,\"control-service\""
+    HOSTNAMES="$HOSTNAMES,\"consul.service.$STACK\""
+    HOSTNAMES="$HOSTNAMES,\"consul-agent.service.$STACK\""
+    HOSTNAMES="$HOSTNAMES,\"swarm.service.$STACK\""
+    HOSTNAMES="$HOSTNAMES,\"registry.service.$STACK\""
+    HOSTNAMES="$HOSTNAMES,\"journald.service.$STACK\""
+    HOSTNAMES="$HOSTNAMES,\"flocker.service.$STACK\""
+    HOSTNAMES="$HOSTNAMES,\"influxdb.service.$STACK\""
+    HOSTNAMES="$HOSTNAMES,\"consul.service.$DATACENTER.$STACK\""
+    HOSTNAMES="$HOSTNAMES,\"consul-agent.service.$DATACENTER.$STACK\""
+    HOSTNAMES="$HOSTNAMES,\"swarm.service.$DATACENTER.$STACK\""
+    HOSTNAMES="$HOSTNAMES,\"registry.service.$DATACENTER.$STACK\""
+    HOSTNAMES="$HOSTNAMES,\"journald.service.$DATACENTER.$STACK\""
+    HOSTNAMES="$HOSTNAMES,\"flocker.service.$DATACENTER.$STACK\""
+    HOSTNAMES="$HOSTNAMES,\"influxdb.service.$DATACENTER.$STACK\""
+    if [[ ! -z "$HOST_IP" ]]; then
+        HOSTNAMES="$HOSTNAMES,\"$HOST_IP\""
+    fi
+
     cat >> "$CERTDIR"/run.sh <<EOF
-cd /certs
+cd $CERTDIR
+
 echo '{"signing":{"default":{"expiry":"100000h","usages":["signing","server auth","client auth"]}}}' > req.json
-echo '{"CN":"$DATACENTER $STACK default","hosts":["$i.node.dev.vagrant","consul.service.dev.vagrant","registry.service.dev.vagrant","swarm.service.dev.vagrant"],"key":{"algo":"rsa","size":4096}}' | cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=req.json - | cfssljson -bare "$i"
+echo '{"names":[{"OU":"$OU"}],"CN":"control-service","hosts":[$HOSTNAMES],"key":{"algo":"rsa","size":2048}}' \
+   | cfssl gencert -ca=$CACERTDIR/ca.pem -ca-key=$CACERTDIR/ca-key.pem -config=req.json -hostname $HOSTNAMES - \
+   | cfssljson -bare "$HOST_NAME-control"
+echo '{"signing":{"default":{"expiry":"100000h","usages":["signing"]}}}' > req.json
+echo '{"names":[{"OU":"$OU"}],"CN":"node-$(uuidgen)","key":{"algo":"rsa","size":2048}}' \
+   | cfssl gencert -ca=$CACERTDIR/ca.pem -ca-key=$CACERTDIR/ca-key.pem -config=req.json - \
+   | cfssljson -bare "$HOST_NAME-node"
+
+if [ ! -z "$HOST_IP" ]; then
+   echo '{"CN":"plugin","names":[{"OU":"$OU"}],"hosts":["$HOST_IP"],"key":{"algo":"rsa","size":2048}}' | cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=req.json -hostname $HOST_IP - | cfssljson -bare "$HOST_NAME-plugin"
+else
+   echo '{"CN":"plugin","names":[{"OU":"$OU"}],"key":{"algo":"rsa","size":2048}}' | cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=req.json - | cfssljson -bare "$HOST_NAME-plugin"
+fi
 EOF
 done
 
 chmod +x "$CERTDIR/run.sh"
-docker run --rm -v "$CERTDIR":/certs --entrypoint /bin/bash cfssl/cfssl -c "/certs/run.sh > /dev/null"
+
+which cfssl > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    "$CERTDIR/run.sh"
+else
+    which docker > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        docker run --rm -v "$CERTDIR":"$CERTDIR" -v "$CACERTDIR":"$CACERTDIR" --entrypoint /bin/bash cfssl/cfssl -c "$CERTDIR/run.sh"
+    else
+        echo "couldn't find nor cfssl nor docker binary." >&2
+        exit 1
+    fi
+fi
+
 sudo chown -R "$USER":"$USER" "$CERTDIR"
 find "$CERTDIR" -type f -exec chmod 0600 {} \;
 rm -f "$CERTDIR/run.sh"

@@ -1,0 +1,10 @@
+[Unit]
+Description=AWS Setup: Mount /var/lib/docker
+Before=dbus.service
+[Mount]
+What=/dev/xvde
+Where=/var/lib/docker
+Type=ext4
+Options=defaults
+[Install]
+WantedBy=default.target

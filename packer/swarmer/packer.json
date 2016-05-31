@@ -1,88 +1,131 @@
 {
-  "builders": [
-    {
-      "name": "aws",
-      "type": "amazon-ebs",
-      "region": "{{user `aws-region`}}",
-      "source_ami": "{{user `aws-source-ami`}}",
-      "instance_type": "t2.medium",
-      "ssh_username": "core",
-      "ami_name": "swarmer-{{timestamp}}"
-    },
-    {
-      "name": "vbox",
-      "type": "virtualbox-ovf",
-      "source_path": "{{user `ovf-source-path`}}",
-      "ssh_username": "core",
-      "output_directory": "builds/swarmer",
-      "headless": true,
-      "ssh_private_key_file": "./vagrant_private_key",
-      "ssh_host_port_min": 2222,
-      "ssh_host_port_max": 2229,
-      "ssh_port": 22,
-      "ssh_wait_timeout": "5m",
-      "vm_name": "swarmer-packer",
-      "shutdown_command": "sudo -S shutdown -P now",
-      "vboxmanage": [
-        [ "modifyvm", "{{.Name}}", "--memory", "1024" ],
-        [ "modifyvm", "{{.Name}}", "--cpus", "1" ]
-      ],
-      "guest_additions_mode": "disable"
+    "builders": [
+        {
+            "name": "aws",
+            "type": "amazon-ebs",
+            "region": "{{user `aws-region`}}",
+            "source_ami": "{{user `aws-source-ami`}}",
+            "instance_type": "m4.4xlarge",
+            "ssh_username": "core",
+            "ebs_optimized": "true",
+            "ami_name": "swarmer-{{timestamp}}",
+            "ami_block_device_mappings": [
+                 {
+                     "device_name": "/dev/xvda",
+                     "volume_size": "3"
+                 }
+            ],
+            "launch_block_device_mappings": [
+                {
+                    "device_name": "/dev/xvdd",
+                    "virtual_name": "ephemeral0"
+                },
+                {
+                    "device_name": "/dev/xvde",
+                    "virtual_name": "ephemeral1"
+                },
+                {
+                    "device_name": "/dev/xvdf",
+                    "virtual_name": "ephemeral2"
+                },
+                {
+                    "device_name": "/dev/xvdg",
+                    "virtual_name": "ephemeral3"
+                }
+            ]
+        },
+        {
+            "name": "vbox",
+            "type": "virtualbox-ovf",
+            "source_path": "{{user `ovf-source-path`}}",
+            "ssh_username": "core",
+            "output_directory": "builds/swarmer",
+            "headless": true,
+            "ssh_private_key_file": "./vagrant_private_key",
+            "ssh_host_port_min": 2222,
+            "ssh_host_port_max": 2229,
+            "ssh_port": 22,
+            "ssh_wait_timeout": "5m",
+            "vm_name": "swarmer-packer",
+            "shutdown_command": "sudo -S shutdown -P now",
+            "vboxmanage": [
+                [ "modifyvm", "{{.Name}}", "--memory", "1024" ],
+                [ "modifyvm", "{{.Name}}", "--cpus", "1" ]
+            ],
+            "guest_additions_mode": "disable"
+        }
+    ],
+    "provisioners": [
+        {
+            "type": "file",
+            "source": "./src",
+            "destination" : "/home/core"
+        },
+        {
+            "type": "file",
+            "source": "./scripts/",
+            "destination" : "/tmp"
+        },
+        {
+            "type": "file",
+            "source": "./builds/docker-images/",
+            "destination" : "/home/core/src",
+            "only": ["vbox"]
+        },
+        {
+            "type": "shell",
+            "inline": ["DL_DIR=/home/core/src /tmp/dl-docker-images.sh {{user `docker_images`}}"],
+             "only": ["aws"]
+        },
+        {
+            "type": "shell",
+            "scripts": [ "scripts/fini.sh" ]
+        },
+        {
+            "type": "shell",
+            "scripts": [ "scripts/aws-fini.sh" ],
+            "only": ["aws"]
+        },
+        {
+            "type": "shell",
+            "inline": ["rm -Rf /home/core/src"],
+            "only": ["aws"]
+        }
+    ],
+    "post-processors": [
+        [
+            {
+                "type": "vagrant",
+                "only": ["vbox"],
+                "output": "./builds/swarmer-coreos.box",
+                "keep_input_artifact": true,
+                "vagrantfile_template": "./builds/coreos/Vagrantfile",
+                "include": [
+                    "./builds/coreos/base_mac.rb",
+                    "./builds/coreos/change_host_name.rb",
+                    "./builds/coreos/configure_networks.rb"
+                ]
+            },
+            {
+                "type": "atlas",
+                "only": ["vbox"],
+                "token": "{{user `atlas_token`}}",
+                "artifact": "yanndegat/swarmer",
+                "artifact_type": "vagrant.box",
+                "metadata": {
+                    "created_at": "{{timestamp}}",
+                    "provider": "virtualbox",
+                    "version": "0.0.5"
+                }
+            }
+        ]
+    ],
+    "variables": {
+        "aws-region": "eu-west-1",
+        "aws-source-ami": "ami-69d7461a",
+        "aws-account-id": "{{env `AWS_ACCOUNT_ID`}}",
+        "ovf-source-path": "./builds/coreos/box.ovf",
+        "atlas_token": "{{env `ATLAS_TOKEN`}}",
+        "docker_images": "{{env `DOCKER_IMAGES`}}"
     }
-  ],
-  "provisioners": [
-    {
-      "type": "file",
-      "source": "./scripts/",
-      "destination" : "/tmp"
-    },
-    {
-      "type": "file",
-      "source": "./builds/docker-images/",
-      "destination" : "/tmp"
-    },
-    {
-      "type": "shell",
-      "scripts": [ "scripts/fini.sh" ]
-    },
-    {
-      "type": "shell",
-      "scripts": [ "scripts/aws-fini.sh" ],
-      "only": ["aws"]
-    }
-  ],
- "post-processors": [
-   [
-     {
-      "type": "vagrant",
-      "only": ["vbox"],
-      "output": "./builds/swarmer-coreos.box",
-      "keep_input_artifact": true,
-      "vagrantfile_template": "./builds/coreos/Vagrantfile",
-      "include": [
-        "./builds/coreos/base_mac.rb",
-        "./builds/coreos/change_host_name.rb",
-        "./builds/coreos/configure_networks.rb"
-      ]
-    },
-    {
-      "type": "atlas",
-      "only": ["vbox"],
-      "token": "{{user `atlas_token`}}",
-      "artifact": "yanndegat/swarmer",
-      "artifact_type": "vagrant.box",
-      "metadata": {
-        "created_at": "{{timestamp}}",
-        "provider": "virtualbox",
-        "version": "0.0.5"
-      }
-    }
-   ]
- ],
-  "variables": {
-    "aws-region": "eu-west-1",
-    "aws-source-ami": "ami-7b971208",
-    "ovf-source-path": "./builds/coreos/box.ovf",
-    "atlas_token": "{{env `ATLAS_TOKEN`}}"
-  }
 }

@@ -61,7 +61,7 @@ services:
     networks:
       - graylog-tier
   replica-set-config:
-    image: registry.service.swarmer:5000/mongo-replicasetup
+    image: yanndegat/mongo-replicasetup:0.1
     restart: 'no'
     depends_on:
       - mongo-0

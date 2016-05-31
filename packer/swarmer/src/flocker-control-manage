@@ -1,0 +1,140 @@
+#!/bin/bash -e
+source "$(dirname "$0")/functions.sh"
+
+DATACENTER=${DATACENTER:-dc1}
+LIB_DIR=/var/lib/flocker
+CONF_DIR="$LIB_DIR"/etc
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hv] start|stop|deregister|register|check|rm
+Handles the lifecycle of the flocker control service
+
+COMMANDS:
+    check              (DEFAULT)check if the service is running
+    register           register flocker controller in consul
+    deregister         deregister flocker controller in consul
+    start              start flocker controller
+    stop               stop flocker controller
+    rm                 rm rkt container
+OPTIONS:
+    -h                 display this help and exit
+    -v                 verbose mode. Can be used multiple
+                       times for increased verbosity.
+EOF
+}
+
+start() {
+    sudo rkt run \
+         --net=host \
+         --hostname="$(hostname)" \
+         --volume resolv,kind=host,source=/etc/resolv.conf,readOnly=false \
+         --mount volume=resolv,target=/etc/resolv.conf \
+         --volume cacerts,kind=host,source=/etc/ssl/certs,readOnly=false \
+         --volume data,kind=host,source="$LIB_DIR",readOnly=false \
+         --volume conf,kind=host,source="$CONF_DIR" \
+         --volume bootid,kind=host,source=/proc/sys/kernel/random/boot_id \
+         --mount volume=bootid,target=/proc/sys/kernel/random/boot_id \
+         --mount volume=cacerts,target=/etc/ssl/certs \
+         --mount volume=data,target=/var/lib/flocker \
+         --mount volume=conf,target=/etc/flocker \
+         --uuid-file-save "$UUID_FILE" \
+         clusterhq/flocker-core --exec /bin/sh -- -c '/usr/lib/klibc/bin/umount /proc/sys/kernel/random/boot_id && /usr/sbin/flocker-control'
+}
+
+check(){
+    run_curl GET "https://$(hostname).node.$DATACENTER.$STACK_NAME:4523/v1/version"
+}
+
+register() {
+    #registers in consul
+    TMPFILE=$(mktemp)
+    cat > $TMPFILE <<EOF
+{
+  "ID":"flocker-control-$(hostname)",
+  "Name": "flocker",
+  "Address": "$IP",
+  "Port": 4000,
+  "Tags": [
+      "ssl","https"
+    ],
+  "Address": "$(gethostadminipaddr)",
+  "Port": 4523,
+  "Check": {
+    "Script": "/opt/swarmer/flocker-control-manage",
+    "Interval": "10s"
+  }
+}
+EOF
+    run_curl PUT "https://$(hostname).node.$DATACENTER.$STACK_NAME:8500/v1/agent/service/register" -d @"$TMPFILE" 2>/dev/null
+    rm "$TMPFILE"
+}
+
+deregister(){
+    #deregisters in consul
+    consul GET "/agent/service/deregister/flocker-control-$(hostname)" 2>/dev/null
+}
+
+if [ ! -f /etc/swarmer/certs/ca.pem ] \
+       || [ ! -f /etc/swarmer/certs/node.pem ] \
+       || [ ! -f /etc/swarmer/certs/node-key.pem ]; then
+    log.error "Certs are missing"
+    exit 1
+fi
+
+if [ "$VOLUME_DRIVER" != "flocker" ];  then
+    log user.info "flocker is disabled"
+    exit 0
+fi
+
+if [ "$FLOCKER_MODE" != "server" ]; then
+    log user.info "not a flocker control node. nothing to do"
+    exit 0
+fi
+
+mkdir -p $CONF_DIR
+cp /etc/swarmer/certs/ca.pem "$CONF_DIR"/cluster.crt
+cp /etc/swarmer/certs/node.pem "$CONF_DIR"/control-service.crt
+cp /etc/swarmer/certs/node-key.pem "$CONF_DIR"/control-service.key
+
+OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
+while getopts ":hv:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        v)  verbose=$((verbose+1))
+            ;;
+        '?')
+            show_help >&2
+            exit 1
+            ;;
+    esac
+done
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+case $1 in
+    start)
+        start
+        ;;
+    stop)
+        stop_rkt
+        ;;
+    rm)
+        rm_rkt
+        ;;
+    deregister)
+        deregister
+        ;;
+    register)
+        register
+        ;;
+    check)
+        check
+        ;;
+    *)
+        check
+        ;;
+esac

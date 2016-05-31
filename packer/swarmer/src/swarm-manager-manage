@@ -1,0 +1,130 @@
+#!/bin/bash -e
+source "$(dirname "$0")/functions.sh"
+
+SWARM_CONTAINER_NAME=${SWARM_CONTAINER_NAME:-swarm}
+SWARM_MODE=${SWARM_MODE:-both}
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hv] start|stop|check|register|deregister|rm
+Handles the lifecycle of a swarm manager
+
+COMMANDS:
+    start              Starts a swarm manager
+    stop               Stops a swarm manager
+    rm                 rm rkt container
+    register           Registers manager in consul
+    deregister         Deregisters manager in consul
+    check              Checks if manager is running
+
+OPTIONS:
+    -h                 display this help and exit
+    -v                 verbose mode. Can be used multiple
+                       times for increased verbosity.
+EOF
+}
+
+start(){
+    log user.info "start"
+    IP=$(gethostadminipaddr)
+    rkt run \
+        --net=host \
+        --hostname="$(hostname)" \
+        --volume certs,kind=host,source=/etc/swarmer/certs,readOnly=true \
+        --volume data,kind=host,source=/var/lib/swarm-manager,readOnly=false \
+        --mount volume=certs,target=/certs \
+        --mount volume=data,target=/.swarm \
+        --uuid-file-save "$UUID_FILE" \
+        swarm --exec /swarm -- \
+        manage --host 0.0.0.0:4000 --replication --advertise "$(hostname).node.$DATACENTER.$STACK_NAME":4000 \
+        --tlsverify \
+        --tlscacert=/certs/ca.pem \
+        --tlscert=/certs/node.pem \
+        --tlskey=/certs/node-key.pem \
+        --discovery-opt kv.cacertfile=/certs/ca.pem \
+        --discovery-opt kv.certfile=/certs/node.pem \
+        --discovery-opt kv.keyfile=/certs/node-key.pem \
+        "consul://$(hostname).node.$DATACENTER.$STACK_NAME:8500/swarm"
+}
+
+register(){
+    #registers in consul
+    TMPFILE=$(mktemp)
+    IP=$(gethostadminipaddr)
+    cat > "$TMPFILE" <<EOF
+{
+  "ID":"swarm-$(hostname)",
+  "Name": "swarm",
+  "Address": "$IP",
+  "Port": 4000,
+  "Tags": [
+      "ssl", "http"
+    ],
+  "Check": {
+    "Script": "/opt/swarmer/swarm-manager-manage",
+    "Interval": "10s"
+  }
+}
+EOF
+    run_curl PUT "https://$(hostname).node.$DATACENTER.$STACK_NAME:8500/v1/agent/service/register" -d @"$TMPFILE" 2>/dev/null
+    rm "$TMPFILE"
+}
+
+deregister(){
+    #deregisters in consul
+    consul GET "/agent/service/deregister/swarm-$(hostname)" 2>/dev/null
+}
+
+check(){
+    run_curl GET "https://$(hostname).node.$DATACENTER.$STACK_NAME:4000/_ping"
+}
+
+if [ "$SWARM_MODE" != "manager" ] && [ "$SWARM_MODE" != "both" ]; then
+    log user.info "not a swarm manager node: nothing to do."
+    exit 0
+fi
+
+mkdir -p /var/lib/swarm-manager
+
+OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
+while getopts ":hv:n:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        v)  verbose=$((verbose+1))
+            ;;
+        '?')
+            show_help >&2
+            exit 2
+            ;;
+    esac
+done
+
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+case $1 in
+    start)
+        start
+        ;;
+    stop)
+        stop_rkt
+        ;;
+    rm)
+        rm_rkt
+        ;;
+    check)
+        check
+        ;;
+    register)
+        register
+        ;;
+    deregister)
+        deregister
+        ;;
+    *)
+        check
+        ;;
+esac

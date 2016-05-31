@@ -1,18 +1,18 @@
 #!/bin/bash -e
 BASEDIR=$(readlink -f "$(dirname "$0")")
-STACK="$1"
-DATACENTER="$2"
-METHOD="$3"
-path="$4"
-shift 4
+STACK="${1}"
+METHOD="$2"
+path="$3"
+shift 3
 
-if [ -z "$STACK" ] || [ -z "$DATACENTER" ]; then
-    echo "usage: $BASEDIR/consul STACK DATACENTER GET|PUT|POST|DELETE CONSUL_PATH [ARGS]"
+if [ -z "$STACK" ]; then
+    echo "usage: $BASEDIR/consul STACK GET|PUT|POST|DELETE CONSUL_PATH [ARGS]" >&2
+    exit 1
 fi
 
-CERTDIR="$HOME/.swarmer/$STACK/$DATACENTER"
+CERTDIR="$HOME/.swarmer/$STACK"
 curl --fail \
      --cacert "$CERTDIR/ca.pem" \
-     --cert "$CERTDIR/client-192.168.101.1.pem" \
-     --key "$CERTDIR/client-192.168.101.1-key.pem" \
-     -"X$METHOD" "https://consul.service.$DATACENTER.$STACK:8500/v1$path" "$@"
+     --cert "$CERTDIR/cert.pem" \
+     --key "$CERTDIR/key.pem" \
+     -"X$METHOD" "https://consul.service.$STACK:8500$path" "$@"

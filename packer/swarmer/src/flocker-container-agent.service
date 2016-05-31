@@ -1,0 +1,10 @@
+[Unit]
+Description=Flocker Container Agent Service
+PartOf=swarmer.service
+After=swarmer.service consul.service
+Before=swarm.service
+[Service]
+Restart=on-failure
+ExecStartPre=-/opt/swarmer/flocker-container-agent-manage rm
+ExecStart=/opt/swarmer/flocker-container-agent-manage start
+ExecStop=/opt/swarmer/flocker-container-agent-manage stop

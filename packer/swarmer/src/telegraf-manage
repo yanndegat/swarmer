@@ -1,0 +1,69 @@
+#!/bin/bash -e
+source "$(dirname "$0")/functions.sh"
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hv] start|stop
+Handles the lifecycle of a telegraf service
+
+COMMANDS:
+    start              Starts forwarder
+    stop               Stops forwarder
+
+OPTIONS:
+    -h                 display this help and exit
+    -v                 verbose mode. Can be used multiple
+                       times for increased verbosity.
+EOF
+}
+
+start(){
+    log user.info "start"
+    if [ ! -z "$INFLUXDB_URL" ]; then
+        export INFLUXDB_URL
+        export STACK_NAME
+        export DATACENTER
+        /opt/swarmer/telegraf -quiet -config /opt/swarmer/telegraf.conf & #Fork!
+        echo $! > /var/run/$SERVICE_NAME.pid
+    else
+        "INFLUXDB_URL not set. nothing to do".
+    fi
+
+}
+
+stop(){
+    log user.info "stop"
+    kill $(cat /var/run/$SERVICE_NAME.pid)
+}
+
+OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
+while getopts ":hv" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        v)  verbose=$((verbose+1))
+            ;;
+        '?')
+            show_help >&2
+            exit 2
+            ;;
+    esac
+done
+
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+case $1 in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    *)
+        log user.error "unknown command: $1"
+        exit 1
+        ;;
+esac

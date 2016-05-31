@@ -1,0 +1,10 @@
+[Unit]
+Description=AWS Setup: Mount /var/lib/rkt
+Before=dbus.service
+[Mount]
+What=/dev/xvdd
+Where=/var/lib/rkt
+Type=ext4
+Options=defaults
+[Install]
+WantedBy=default.target

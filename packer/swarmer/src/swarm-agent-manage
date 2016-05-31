@@ -1,0 +1,91 @@
+#!/bin/bash -e
+source "$(dirname "$0")/functions.sh"
+
+SWARM_CONTAINER_NAME=${SWARM_CONTAINER_NAME:-swarm}
+SWARM_MODE=${SWARM_MODE:-both}
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hv] start|stop|engine-opts|rm
+Handles the lifecycle of a swarm agent
+
+COMMANDS:
+    start              Starts a swarm agent
+    stop               Stops a swarm agent
+    rm                 rm rkt container
+    engine-opts        Echo engine opts
+
+OPTIONS:
+    -h                 display this help and exit
+    -v                 verbose mode. Can be used multiple
+                       times for increased verbosity.
+EOF
+}
+
+engine_opts(){
+    IP=$(gethostadminipaddr)
+    echo "-H tcp://$IP:2376 --tlsverify --tlscacert=/etc/swarmer/certs/ca.pem --tlscert=/etc/swarmer/certs/node.pem --tlskey=/etc/swarmer/certs/node-key.pem --cluster-store=consul://$(hostname).node.$DATACENTER.$STACK_NAME:8500 --cluster-store-opt kv.cacertfile=/etc/swarmer/certs/ca.pem --cluster-store-opt kv.certfile=/etc/swarmer/certs/node.pem --cluster-store-opt kv.keyfile=/etc/swarmer/certs/node-key.pem --cluster-advertise=$IP:2376"
+}
+
+start(){
+    log user.info "start"
+    rkt run \
+        --net=host \
+        --hostname="$(hostname)" \
+        --volume certs,kind=host,source=/etc/swarmer/certs,readOnly=true \
+        --volume data,kind=host,source=/var/lib/swarm-agent,readOnly=false \
+        --mount volume=certs,target=/certs \
+        --mount volume=data,target=/.swarm \
+        --uuid-file-save "$UUID_FILE" \
+        swarm --exec /swarm -- \
+        join --advertise "$(hostname).node.$DATACENTER.$STACK_NAME":2376 \
+        --discovery-opt kv.cacertfile=/certs/ca.pem \
+        --discovery-opt kv.certfile=/certs/node.pem \
+        --discovery-opt kv.keyfile=/certs/node-key.pem \
+        "consul://$(hostname).node.$DATACENTER.$STACK_NAME:8500/swarm"
+}
+
+if [ "$SWARM_MODE" != "agent" ] && [ "$SWARM_MODE" != "both" ]; then
+    log user.info "not a swarm agent node: nothing to do."
+    exit 0
+fi
+
+mkdir -p /var/lib/swarm-agent
+
+OPTIND=1 # Reset is necessary if getopts was used previously in the script.  It is a good idea to make this local in a function.
+while getopts ":hv:n:" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        v)  verbose=$((verbose+1))
+            ;;
+        '?')
+            show_help >&2
+            exit 2
+            ;;
+    esac
+done
+
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+case $1 in
+    engine-opts)
+        engine_opts
+        ;;
+    start)
+        start
+        ;;
+    rm)
+        rm_rkt
+        ;;
+    stop)
+        stop_rkt
+        ;;
+    *)
+        log user.error "unknown command: $1"
+        exit 1
+        ;;
+esac
